@@ -1560,6 +1560,7 @@ impl TerminalManager {
                         model.record_ambient_execution_ended(ended_session_id.clone());
                     });
                 }
+                terminal_view.on_ambient_agent_execution_ended(ctx);
             });
         }
         if Self::current_network(current_network)
