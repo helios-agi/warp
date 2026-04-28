@@ -20,6 +20,11 @@ impl PiSession {
     ///
     /// The process runs `pi --agent <agent>` as a subprocess with piped
     /// stdin/stdout/stderr so the terminal can relay I/O.
+    ///
+    /// **Environment inheritance:** The Pi subprocess inherits ALL parent
+    /// environment variables by default. This is intentional — Pi needs
+    /// provider API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.) from
+    /// the environment to authenticate with LLM providers.
     pub async fn spawn(config: &HeliosConfig, cwd: &Path) -> anyhow::Result<Self> {
         let child = Command::new(&config.pi_binary)
             .args(["--agent", &config.default_agent])

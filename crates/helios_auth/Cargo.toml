@@ -2,6 +2,7 @@
 name = "helios_auth"
 version = "0.1.0"
 edition = "2021"
+authors = ["Helios AGI <dev@helios-agi.dev>"]
 description = "Authentication for Helios-Terminal — Pi local auth + helios-agi cloud OAuth"
 license = "MIT"
 publish = false

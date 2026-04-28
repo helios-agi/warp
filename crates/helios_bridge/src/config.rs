@@ -64,3 +64,24 @@ impl HeliosConfig {
             .join("config.toml")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_has_sane_values() {
+        let config = HeliosConfig::default();
+        assert_eq!(config.default_agent, "helios");
+        assert!(!config.cloud_auth);
+        assert!(config.pi_home.ends_with(".pi"));
+    }
+
+    #[test]
+    fn config_is_serializable() {
+        let config = HeliosConfig::default();
+        let serialized = toml::to_string(&config).unwrap();
+        assert!(serialized.contains("default_agent"));
+        assert!(serialized.contains("helios"));
+    }
+}

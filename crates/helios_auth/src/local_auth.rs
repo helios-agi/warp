@@ -14,6 +14,7 @@ pub struct ProviderConfig {
     /// Provider name (e.g. "anthropic", "openai", "google").
     pub name: String,
     /// Whether this provider has a valid API key configured.
+    #[serde(default)]
     pub has_key: bool,
 }
 
@@ -54,5 +55,36 @@ impl PiLocalAuth {
 
     fn providers_path(&self) -> PathBuf {
         self.pi_home.join("providers.json")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_providers_json_round_trip() {
+        let json = r#"[{"name": "anthropic", "has_key": true}, {"name": "openai", "has_key": false}]"#;
+        let providers: Vec<ProviderConfig> = serde_json::from_str(json).unwrap();
+        assert_eq!(providers.len(), 2);
+        assert_eq!(providers[0].name, "anthropic");
+        assert!(providers[0].has_key);
+        assert_eq!(providers[1].name, "openai");
+        assert!(!providers[1].has_key);
+    }
+
+    #[test]
+    fn parse_providers_with_missing_fields_uses_defaults() {
+        // Test that #[serde(default)] works
+        let json = r#"[{"name": "google"}]"#;
+        let providers: Vec<ProviderConfig> = serde_json::from_str(json).unwrap();
+        assert_eq!(providers[0].name, "google");
+        assert!(!providers[0].has_key); // default is false
+    }
+
+    #[test]
+    fn default_home_returns_pi_directory() {
+        let auth = PiLocalAuth::default_home();
+        assert!(auth.pi_home.ends_with(".pi"));
     }
 }

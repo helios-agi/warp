@@ -5900,10 +5900,8 @@ dependencies = [
  "helios_auth",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
  "tokio",
  "toml 0.8.23",
- "tracing",
  "which 7.0.3",
 ]
 

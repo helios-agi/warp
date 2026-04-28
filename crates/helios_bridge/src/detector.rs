@@ -3,8 +3,27 @@
 //! Checks whether the `pi` binary is installed, its version, and whether
 //! provider configuration exists — everything needed before spawning a session.
 
+#![allow(clippy::disallowed_types)]
+
 use std::path::PathBuf;
 use std::process::Command;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+/// Create a Command that doesn't flash a console window on Windows.
+fn pi_command(program: &str) -> Command {
+    #[cfg(windows)]
+    {
+        let mut cmd = Command::new(program);
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        cmd
+    }
+    #[cfg(not(windows))]
+    {
+        Command::new(program)
+    }
+}
 
 /// Status of the local Pi runtime installation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,7 +67,13 @@ impl PiDetector {
 
     /// Runs `pi --version` and returns the version string, if available.
     pub fn pi_version(&self) -> Option<String> {
-        Command::new("pi")
+        self.pi_version_with_binary("pi")
+    }
+
+    /// Runs `<binary> --version` and returns the version string, if available.
+    /// Exposed for testing.
+    fn pi_version_with_binary(&self, binary: &str) -> Option<String> {
+        pi_command(binary)
             .arg("--version")
             .output()
             .ok()
@@ -70,7 +95,12 @@ impl PiDetector {
 
     /// Run all detection checks and return an overall [`PiStatus`].
     pub fn detect(&self) -> PiStatus {
-        if !self.is_pi_installed() {
+        self.detect_with_binary("pi")
+    }
+
+    /// Run detection with a custom binary name (for testing).
+    pub fn detect_with_binary(&self, binary: &str) -> PiStatus {
+        if which::which(binary).is_err() {
             return PiStatus::NotInstalled;
         }
 
@@ -81,5 +111,29 @@ impl PiDetector {
         // TODO: Add version comparison against a minimum required version.
         // For now, any installed version with providers is considered ready.
         PiStatus::Ready
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detect_returns_not_installed_when_pi_missing() {
+        let detector = PiDetector::default_home();
+        let status = detector.detect_with_binary("nonexistent-binary-xyz-12345");
+        assert!(matches!(status, PiStatus::NotInstalled));
+    }
+
+    #[test]
+    fn pi_status_variants() {
+        // Ensure all variants are constructible
+        let _ready = PiStatus::Ready;
+        let _not_installed = PiStatus::NotInstalled;
+        let _no_providers = PiStatus::NoProviders;
+        let _version_mismatch = PiStatus::VersionMismatch {
+            found: "0.1.0".to_string(),
+            required: "0.2.0".to_string(),
+        };
     }
 }
