@@ -12,7 +12,7 @@ pub mod unix;
 /// Run the `remote-server-proxy` subcommand.
 #[cfg(unix)]
 pub fn run_proxy() -> anyhow::Result<()> {
-    unix::run_proxy()
+    unix::proxy::run()
 }
 
 #[cfg(not(unix))]
