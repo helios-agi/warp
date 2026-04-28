@@ -92,6 +92,10 @@ warpui_extras = { path = "crates/warpui_extras", default-features = false }
 watcher = { path = "crates/watcher" }
 websocket = { path = "crates/websocket" }
 
+# Helios-Terminal crates
+helios_bridge = { path = "crates/helios_bridge" }
+helios_auth = { path = "crates/helios_auth" }
+
 # Workspace-level dependencies used by multiple crates. Prefer adding dependencies
 # here to copying-and-pasting versions.
 axum = "0.8.4"
