@@ -291,6 +291,11 @@ impl VoiceInputToggleKey {
     description = "Default mode for new sessions.",
     rename_all = "snake_case"
 )]
+/// Default mode for new sessions.
+///
+/// For Helios-Terminal: To make Agent mode the default, change the #[default]
+/// attribute from Terminal to Agent below. Alternatively, users can set this
+/// via Settings > AI > Default Session Mode.
 pub enum DefaultSessionMode {
     /// New sessions start in the terminal mode (default).
     #[default]
