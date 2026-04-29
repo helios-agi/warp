@@ -52,6 +52,10 @@ pub enum ThemeKind {
     #[schemars(description = "Phenomenon")]
     Phenomenon,
     #[default]
+    #[schemars(description = "Helios Dark")]
+    HeliosDark,
+    #[schemars(description = "Helios Light")]
+    HeliosLight,
     #[schemars(description = "Dark")]
     Dark,
     #[schemars(description = "Dracula")]
@@ -113,6 +117,8 @@ impl std::fmt::Display for ThemeKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let value = match &self {
             ThemeKind::Light => "Light",
+            ThemeKind::HeliosDark => "Helios Dark",
+            ThemeKind::HeliosLight => "Helios Light",
             ThemeKind::Dark => "Dark",
             ThemeKind::Dracula => "Dracula",
             ThemeKind::SolarizedDark => "Solarized Dark",
@@ -133,8 +139,8 @@ impl std::fmt::Display for ThemeKind {
             ThemeKind::Phenomenon => "Phenomenon",
             ThemeKind::SolarFlare => "Solar Flare",
             ThemeKind::Adeberry => "Adeberry",
-            ThemeKind::SentReferralReward => "Warp Referral",
-            ThemeKind::ReceivedReferralReward => "Referred to Warp",
+            ThemeKind::SentReferralReward => "Helios Referral",
+            ThemeKind::ReceivedReferralReward => "Referred to Helios",
             ThemeKind::Custom(custom_theme) => custom_theme.name.as_str(),
             ThemeKind::CustomBase16(custom_theme) => custom_theme.name.as_str(),
             ThemeKind::InMemory(in_memory_theme) => in_memory_theme.name.as_str(),
@@ -300,6 +306,8 @@ impl WarpThemeConfig {
                 ThemeKind::ReceivedReferralReward,
                 received_referral_reward(),
             ),
+            (ThemeKind::HeliosDark, helios_dark_theme()),
+            (ThemeKind::HeliosLight, helios_light_theme()),
             (ThemeKind::Dark, dark_theme()),
             (ThemeKind::Light, light_theme()),
             (ThemeKind::SolarizedDark, solarized_dark()),
@@ -386,7 +394,7 @@ impl Default for SelectedSystemThemes {
     fn default() -> Self {
         Self {
             light: ThemeKind::Light,
-            dark: ThemeKind::Dark,
+            dark: ThemeKind::HeliosDark,
         }
     }
 }

@@ -206,6 +206,33 @@ impl CLIAgentSession {
                 self.plugin_version = event.payload.plugin_version.clone();
                 return None;
             }
+            // Informational Helios events that do not affect session status.
+            CLIAgentEventType::MetricsUpdate => return None,
+            CLIAgentEventType::SubagentUpdate => return None,
+            CLIAgentEventType::SystemMessage => return None,
+            // Helios interactive-input events: agent is blocked waiting for user.
+            CLIAgentEventType::InterviewRequest => CLIAgentSessionStatus::Blocked {
+                message: event
+                    .payload
+                    .message
+                    .clone()
+                    .or_else(|| Some("Waiting for interview response".to_owned())),
+            },
+            CLIAgentEventType::DecisionRequest => CLIAgentSessionStatus::Blocked {
+                message: event
+                    .payload
+                    .message
+                    .clone()
+                    .or_else(|| Some("Waiting for decision".to_owned())),
+            },
+            // ToolResult: the Pi bridge emits this when a tool finishes; treat as
+            // unblocking (analogous to ToolComplete) unless a tool error is present.
+            CLIAgentEventType::ToolResult => {
+                if !matches!(self.status, CLIAgentSessionStatus::Blocked { .. }) {
+                    return None;
+                }
+                CLIAgentSessionStatus::InProgress
+            }
             CLIAgentEventType::Unknown(_) => return None,
         };
 

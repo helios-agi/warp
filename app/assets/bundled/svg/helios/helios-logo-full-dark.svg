@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 160" width="460" height="160">
+  <!-- Helios Full Logo: Mark + Wordmark on Dark Background -->
+  <rect x="0" y="0" width="460" height="160" rx="8" fill="#020914"/>
+  
+  <!-- Orbital Ring Mark -->
+  <g transform="translate(80, 80)">
+    <circle cx="0" cy="0" r="48" fill="none" stroke="#22D3EE" stroke-width="3"/>
+    <ellipse cx="0" cy="0" rx="48" ry="16" fill="none" stroke="#22D3EE" stroke-width="2.5" transform="rotate(-25)"/>
+    <circle cx="0" cy="0" r="4.5" fill="#22D3EE"/>
+  </g>
+  
+  <!-- Wordmark -->
+  <text x="160" y="94" font-family="'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif" font-weight="300" font-size="44" fill="#22D3EE" letter-spacing="2">helios.</text>
+</svg>

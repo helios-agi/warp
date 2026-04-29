@@ -1,0 +1,214 @@
+# Helios-Terminal CI
+#
+# Cross-platform build and test pipeline for the helios-agi fork.
+# Runs alongside the upstream Warp CI (ci.yml) without replacing it.
+#
+# Two jobs:
+#   1. helios-crates  – fast, must-pass check of our new crates (helios_bridge, helios_auth)
+#   2. build          – full workspace build + test (continue-on-error while Warp cloud deps remain)
+
+name: Helios-Terminal CI
+
+on:
+  push:
+    branches: [master, 'helios/*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -C debuginfo=line-tables-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 1: Helios-only crates — MUST pass on every platform
+  # ──────────────────────────────────────────────────────────────────────
+  helios-crates:
+    name: Helios Crates (${{ matrix.name }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos
+            runner: macos-latest
+          - name: Linux
+            os: linux
+            runner: ubuntu-latest
+          - name: Windows
+            os: windows
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-helios-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-helios-cargo-
+
+      # Linux needs a handful of -dev headers that our crates (or their
+      # transitive deps) pull in at compile time.
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential cmake pkg-config \
+            libssl-dev libfreetype-dev libexpat1-dev libfontconfig1-dev \
+            libx11-dev libxcb1-dev libxi-dev libxcursor-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libegl1-mesa-dev \
+            libasound2-dev
+
+      - name: Check helios_bridge
+        run: cargo check -p helios_bridge
+
+      - name: Check helios_auth
+        run: cargo check -p helios_auth
+
+      - name: Test helios_bridge
+        run: cargo test -p helios_bridge
+
+      - name: Test helios_auth
+        run: cargo test -p helios_auth
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 2: Full workspace build + test (best-effort)
+  # ──────────────────────────────────────────────────────────────────────
+  build:
+    name: Build ${{ matrix.name }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos
+            runner: macos-latest
+          - name: Linux
+            os: linux
+            runner: ubuntu-latest
+          - name: Windows
+            os: windows
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-helios-full-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-helios-full-cargo-
+
+      # ── Platform-specific dependencies ────────────────────────────────
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos'
+        run: |
+          brew install llvm pkg-config protobuf
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential cmake pkg-config python-is-python3 \
+            libssl-dev libfreetype-dev libexpat1-dev libgit2-dev libfontconfig1-dev \
+            libx11-dev libxcb1-dev libxi-dev libxcursor-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libegl1-mesa-dev \
+            libasound2-dev \
+            libx11-6 libxcb1 libxi6 libxcursor1 libxkbcommon-x11-0 \
+            libwayland-client0 libwayland-egl1 \
+            mesa-vulkan-drivers libegl1 \
+            jq brotli
+          # Install protoc (apt version is too old for proto3 optional fields)
+          PROTOC_VERSION="25.1"
+          ARCH="$(uname -m)"
+          case "$ARCH" in
+            x86_64)  PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip" ;;
+            aarch64) PROTOC_ZIP="protoc-${PROTOC_VERSION}-linux-aarch_64.zip" ;;
+            *)       echo "Unsupported arch: $ARCH"; exit 1 ;;
+          esac
+          curl -fsSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
+          sudo unzip -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+          rm /tmp/protoc.zip
+
+      # ── Build ─────────────────────────────────────────────────────────
+
+      - name: Build helios crates
+        run: |
+          cargo build -p helios_bridge
+          cargo build -p helios_auth
+
+      - name: Build workspace
+        run: cargo build --workspace
+        continue-on-error: true  # Full workspace may fail until Warp cloud deps are stripped
+
+      # ── Test ──────────────────────────────────────────────────────────
+
+      - name: Test helios crates
+        run: |
+          cargo test -p helios_bridge
+          cargo test -p helios_auth
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+        continue-on-error: true
+
+      - name: Test workspace (nextest)
+        run: cargo nextest run --workspace --locked --exclude command-signatures-v2
+        continue-on-error: true  # Full workspace tests may fail until cloud deps are stripped
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 3: Gate — aggregates results
+  # ──────────────────────────────────────────────────────────────────────
+  ci-result:
+    name: Helios CI Result
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: [helios-crates, build]
+    steps:
+      - name: Check results
+        run: |
+          # helios-crates MUST pass
+          if [ "${{ needs.helios-crates.result }}" != "success" ]; then
+            echo "::error::helios-crates job failed (status: ${{ needs.helios-crates.result }})"
+            exit 1
+          fi
+          # build is best-effort — log but don't fail
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "::warning::Full workspace build did not succeed (status: ${{ needs.build.result }}). This is expected until Warp cloud deps are stripped."
+          fi
+          echo "✅ Helios CI checks passed!"

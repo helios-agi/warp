@@ -1,0 +1,27 @@
+[package]
+name = "helios_bridge"
+version = "0.1.0"
+edition = "2021"
+description = "Bridge between Helios-Terminal and Pi (helios-agi) runtime"
+authors = ["Helios AGI <dev@helios-agi.dev>"]
+license = "MIT"
+publish = false
+
+[features]
+default = []
+cloud_auth = ["dep:helios_auth"]
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["process", "io-util", "sync", "rt"] }
+which = "7"
+dirs = "6"
+
+# Re-export types that the app crate needs (compatibility shim)
+# These replace the old `ai` crate types
+toml = "0.8"
+
+# Optional cloud auth
+helios_auth = { path = "../helios_auth", optional = true }

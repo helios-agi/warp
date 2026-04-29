@@ -23,6 +23,13 @@ pub(super) fn parse(body: &str) -> Option<CLIAgentEvent> {
         "permission_replied" => CLIAgentEventType::PermissionReplied,
         "question_asked" => CLIAgentEventType::QuestionAsked,
         "idle_prompt" => CLIAgentEventType::IdlePrompt,
+        // Helios converged-panel events
+        "metrics_update" => CLIAgentEventType::MetricsUpdate,
+        "subagent_update" => CLIAgentEventType::SubagentUpdate,
+        "system_message" => CLIAgentEventType::SystemMessage,
+        "interview_request" => CLIAgentEventType::InterviewRequest,
+        "decision_request" => CLIAgentEventType::DecisionRequest,
+        "tool_result" => CLIAgentEventType::ToolResult,
         other => CLIAgentEventType::Unknown(other.to_string()),
     };
 
@@ -54,6 +61,23 @@ pub(super) fn parse(body: &str) -> Option<CLIAgentEvent> {
             tool_name: raw.tool_name,
             tool_input_preview,
             plugin_version: raw.plugin_version,
+            // Rich tool execution data
+            tool_result: raw.tool_result,
+            tool_error: raw.tool_error,
+            tool_duration_ms: raw.tool_duration_ms,
+            // LLM metrics
+            input_tokens: raw.input_tokens,
+            output_tokens: raw.output_tokens,
+            cost_usd: raw.cost_usd,
+            model: raw.model,
+            // Subagent progress
+            subagent_name: raw.subagent_name,
+            subagent_role: raw.subagent_role,
+            subagent_status: raw.subagent_status,
+            // Governance / brain / cortex messages
+            source: raw.source,
+            severity: raw.severity,
+            message: raw.message,
         },
     })
 }
@@ -73,4 +97,22 @@ struct RawEvent {
     tool_name: Option<String>,
     tool_input: Option<serde_json::Value>,
     plugin_version: Option<String>,
+    // Rich tool execution data
+    tool_result: Option<String>,
+    tool_error: Option<String>,
+    tool_duration_ms: Option<u64>,
+    // LLM metrics
+    input_tokens: Option<u64>,
+    output_tokens: Option<u64>,
+    cost_usd: Option<f64>,
+    model: Option<String>,
+    // Subagent progress; `status` is an accepted alias for `subagent_status`
+    subagent_name: Option<String>,
+    subagent_role: Option<String>,
+    #[serde(alias = "status")]
+    subagent_status: Option<String>,
+    // Governance / brain / cortex messages
+    source: Option<String>,
+    severity: Option<String>,
+    message: Option<String>,
 }

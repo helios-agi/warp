@@ -1,0 +1,25 @@
+#!/bin/bash
+# Helios-Terminal channel config stub
+# Replaces Warp's private warp-channel-config tool for dev builds
+# Outputs minimal ChannelConfig JSON for local development
+
+cat << 'EOF'
+{
+  "app_id": "dev.helios.terminal",
+  "logfile_name": "helios-terminal.log",
+  "server_config": {
+    "server_root_url": "https://localhost:8080",
+    "rtc_server_url": "wss://localhost:8080/graphql/v2",
+    "session_sharing_server_url": null,
+    "firebase_auth_api_key": "disabled"
+  },
+  "oz_config": {
+    "oz_root_url": "https://localhost:8080",
+    "workload_audience_url": null
+  },
+  "telemetry_config": null,
+  "autoupdate_config": null,
+  "crash_reporting_config": null,
+  "mcp_static_config": null
+}
+EOF
