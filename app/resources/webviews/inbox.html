@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helios Inbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        .email-item:hover {
+            background-color: rgba(55, 65, 81, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold">Helios Inbox</h1>
+            <button id="refresh-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                Refresh
+            </button>
+        </div>
+
+        <!-- Email List -->
+        <div id="email-list" class="space-y-2">
+            <!-- Placeholder emails will be inserted here -->
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center text-gray-400 py-8 hidden">
+            <p>Loading emails...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center text-gray-400 py-8 hidden">
+            <p>No emails found</p>
+        </div>
+    </div>
+
+    <script>
+        // Placeholder email data
+        const placeholderEmails = [
+            {
+                id: 1,
+                sender: "Sarah Chen",
+                email: "sarah@techcorp.com",
+                subject: "Q2 Product Roadmap Review",
+                preview: "Hi team, I've attached the updated roadmap for Q2. Please review the timeline and dependencies before our meeting...",
+                time: "2 hours ago",
+                unread: true
+            },
+            {
+                id: 2,
+                sender: "Alex Rodriguez",
+                email: "alex@startup.io",
+                subject: "Partnership Proposal",
+                preview: "Following up on our conversation last week. I think there's a great opportunity for collaboration between our teams...",
+                time: "5 hours ago",
+                unread: true
+            },
+            {
+                id: 3,
+                sender: "Morgan Williams",
+                email: "morgan@venture.capital",
+                subject: "Investment Discussion",
+                preview: "Thank you for the pitch deck. We're impressed with the traction and would like to schedule a follow-up call...",
+                time: "Yesterday",
+                unread: false
+            },
+            {
+                id: 4,
+                sender: "Jordan Park",
+                email: "jordan@consulting.com",
+                subject: "Project Status Update",
+                preview: "All deliverables for Phase 1 are complete. Moving into Phase 2 next week with the updated timeline...",
+                time: "2 days ago",
+                unread: false
+            }
+        ];
+
+        // IPC Bridge setup
+        window._heliosResponse = function(data) {
+            try {
+                const result = JSON.parse(data);
+                if (result.error) {
+                    console.error('Helios IPC Error:', result.error);
+                    renderEmails(placeholderEmails);
+                } else if (result.data && Array.isArray(result.data)) {
+                    // Parse real email data from Memgraph
+                    const emails = result.data.map(row => ({
+                        id: row.e.id,
+                        sender: row.e.sender,
+                        email: row.e.email,
+                        subject: row.e.subject,
+                        preview: row.e.preview || row.e.body?.substring(0, 120) + '...',
+                        time: formatTime(row.e.date),
+                        unread: row.e.unread || false
+                    }));
+                    renderEmails(emails);
+                } else {
+                    renderEmails(placeholderEmails);
+                }
+            } catch (e) {
+                console.error('Error parsing Helios response:', e);
+                renderEmails(placeholderEmails);
+            }
+        };
+
+        function formatTime(timestamp) {
+            if (!timestamp) return 'Unknown';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffHours < 1) return 'Just now';
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            return date.toLocaleDateString();
+        }
+
+        function renderEmails(emails) {
+            const emailList = document.getElementById('email-list');
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('empty-state');
+
+            loading.classList.add('hidden');
+
+            if (!emails || emails.length === 0) {
+                emailList.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            
+            emailList.innerHTML = emails.map(email => `
+                <div class="email-item bg-gray-800 rounded-lg p-4 cursor-pointer transition-all border border-gray-700 ${email.unread ? 'border-blue-500/50' : ''}" data-id="${email.id}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                ${email.sender.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold ${email.unread ? 'text-white' : 'text-gray-300'}">${email.sender}</h3>
+                                <p class="text-sm text-gray-500">${email.email}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${email.unread ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                            <span class="text-sm text-gray-500">${email.time}</span>
+                        </div>
+                    </div>
+                    <div class="ml-13">
+                        <h4 class="font-medium mb-1 ${email.unread ? 'text-white' : 'text-gray-400'}">${email.subject}</h4>
+                        <p class="text-sm text-gray-500 line-clamp-2">${email.preview}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.email-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const emailId = this.getAttribute('data-id');
+                    console.log('Email clicked:', emailId);
+                    // Future: Open email detail view
+                });
+            });
+        }
+
+        function queryEmails() {
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+
+            if (window.helios && window.helios.postMessage) {
+                // Query Memgraph for real email data
+                window.helios.postMessage(JSON.stringify({
+                    type: "query",
+                    cypher: "MATCH (e:Email) RETURN e ORDER BY e.date DESC LIMIT 50"
+                }));
+            } else {
+                // IPC not available, use placeholder data
+                console.log('Helios IPC bridge not available, using placeholder data');
+                setTimeout(() => renderEmails(placeholderEmails), 500);
+            }
+        }
+
+        // Refresh button handler
+        document.getElementById('refresh-btn').addEventListener('click', queryEmails);
+
+        // Initial load
+        queryEmails();
+    </script>
+</body>
+</html>
