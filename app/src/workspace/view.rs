@@ -3108,7 +3108,7 @@ impl Workspace {
             shared_objects_creation_denied_modal,
             file_upload_sessions: Default::default(),
             ai_fact_view,
-            left_panel_open: false,
+            left_panel_open: true,
             vertical_tabs_panel_open: false,
             vertical_tabs_panel: Default::default(),
             left_panel_view,
@@ -16598,7 +16598,7 @@ impl Workspace {
                     {
                         ToolPanelView::ProjectExplorer => "Project explorer",
                         ToolPanelView::GlobalSearch { .. } => "Global search",
-                        ToolPanelView::WarpDrive => "Warp Drive",
+                        ToolPanelView::WarpDrive => "Helios Cloud",
                         ToolPanelView::ConversationListView => "Agent conversations",
                     }
                 } else {
@@ -16652,7 +16652,7 @@ impl Workspace {
             {
                 ToolPanelView::ProjectExplorer => "Project explorer",
                 ToolPanelView::GlobalSearch { .. } => "Global search",
-                ToolPanelView::WarpDrive => "Warp Drive",
+                ToolPanelView::WarpDrive => "Helios Cloud",
                 ToolPanelView::ConversationListView => "Agent conversations",
             }
         } else {

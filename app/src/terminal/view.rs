@@ -11220,6 +11220,10 @@ impl TerminalView {
             }
             ModelEvent::BootstrapPrecmdDone => {
                 self.execute_pending_command((), ctx);
+                // Auto-launch Pi agent in Helios Terminal
+                if !self.input.read(ctx, |input, _| input.has_pending_command()) {
+                    self.execute_command_or_set_pending("pi", ctx);
+                }
             }
             ModelEvent::AgentTaggedInChanged { is_tagged_in } => {
                 let state = if *is_tagged_in {
