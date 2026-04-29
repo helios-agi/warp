@@ -22,6 +22,13 @@ pub enum CLIAgentEventType {
     PermissionReplied,
     QuestionAsked,
     IdlePrompt,
+    // Helios converged-panel events
+    MetricsUpdate,
+    SubagentUpdate,
+    SystemMessage,
+    InterviewRequest,
+    DecisionRequest,
+    ToolResult,
     Unknown(String),
 }
 
@@ -36,6 +43,23 @@ pub struct CLIAgentEventPayload {
     pub tool_name: Option<String>,
     pub tool_input_preview: Option<String>,
     pub plugin_version: Option<String>,
+    // Rich tool execution data (ToolResult / ToolComplete)
+    pub tool_result: Option<String>,
+    pub tool_error: Option<String>,
+    pub tool_duration_ms: Option<u64>,
+    // LLM metrics (MetricsUpdate)
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+    pub cost_usd: Option<f64>,
+    pub model: Option<String>,
+    // Subagent progress (SubagentUpdate)
+    pub subagent_name: Option<String>,
+    pub subagent_role: Option<String>,
+    pub subagent_status: Option<String>,
+    // Governance / brain / cortex messages (SystemMessage)
+    pub source: Option<String>,
+    pub severity: Option<String>,
+    pub message: Option<String>,
 }
 
 /// A parsed event from a CLI agent plugin.
