@@ -25,23 +25,20 @@ impl std::fmt::Display for OnboardingIntention {
 pub use callout::{OnboardingCalloutView, OnboardingKeybindings};
 
 /// User-facing names of the AI features enabled when the agent intention is selected.
-/// Shared by the intention slide's agent card checklist and the login slide's
-/// skip-login confirmation dialog so the two always stay in sync.
+/// Shared by the intention slide's agent card checklist and any future
+/// surfaces that need to enumerate agent capabilities.
 pub const AI_FEATURES: &[&str] = &[
-    "Helios agents",
-    "Oz cloud agents platform",
-    "Next command predictions",
-    "Prompt suggestions",
-    "Codebase context",
-    "Remote control with Claude Code, Codex, and other agents",
+    "Helios AI agent (Pi runtime)",
+    "Multi-agent orchestration (scout, planner, worker, reviewer)",
+    "Skills and extensions ecosystem",
+    "Codebase indexing and context",
+    "CLI agent support (Claude Code, Codex, Gemini, and more)",
+    "Command predictions and completions",
     "Agents over SSH",
 ];
 
-/// User-facing names of the Warp Drive features enabled when the terminal
-/// intention is selected with Warp Drive turned on. Shared by the login slide's
-/// skip-login confirmation dialog so the list stays in sync with any future
-/// surfaces that need it.
-pub const WARP_DRIVE_FEATURES: &[&str] = &["Helios Drive", "Session Sharing"];
+/// Features available with Helios cloud account.
+pub const HELIOS_CLOUD_FEATURES: &[&str] = &["Settings sync", "Session sharing"];
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "bin")] {

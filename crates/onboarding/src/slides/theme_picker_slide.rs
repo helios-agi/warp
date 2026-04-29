@@ -50,7 +50,7 @@ pub enum ThemePickerSlideAction {
     PrivacySettingsClicked,
 }
 
-const TOS_URL: &str = "https://www.warp.dev/terms-of-service";
+const TOS_URL: &str = "https://helios.dev/terms-of-service";
 
 #[derive(Debug, Clone)]
 struct ThemeOption {
@@ -597,7 +597,7 @@ impl ThemePickerSlide {
         let tos_line = Flex::row()
             .with_child(
                 ui_builder
-                    .span("By continuing, you agree to Helios's ")
+                    .span("By continuing, you agree to the Helios ")
                     .with_style(disclaimer_styles)
                     .build()
                     .finish(),

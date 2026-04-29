@@ -26,7 +26,7 @@ impl UICustomizationSettings {
             show_conversation_history: true,
             show_project_explorer: true,
             show_global_search: true,
-            show_warp_drive: true,
+            show_warp_drive: false,
             show_code_review_button: true,
         }
     }
@@ -163,8 +163,11 @@ impl OnboardingStateModel {
         agent_modality_enabled: bool,
         free_user_no_ai_experiment: bool,
         agent_price_cents: Option<i32>,
-        auth_state: OnboardingAuthState,
+        _auth_state: OnboardingAuthState,
     ) -> Self {
+        // Helios is BYOK (bring your own key) — no subscription or login required.
+        // Treat every user as a paying user so paywall slides are never shown.
+        let auth_state = OnboardingAuthState::PayingUser;
         Self {
             step: OnboardingStep::Intro,
             intention: OnboardingIntention::AgentDrivenDevelopment,
