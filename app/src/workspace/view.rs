@@ -10909,8 +10909,8 @@ impl Workspace {
         if std::path::Path::new(&dev_path).exists() {
             return format!("file://{}", dev_path);
         }
-        // Last resort
-        format!("file:///tmp/{}", filename)
+        // Last resort — return an error page URL instead of a writable tmp path
+        format!("about:blank#error-resource-not-found-{}", filename)
     }
 
     pub fn add_tab_for_webview(&mut self, title: &str, url: &str, ctx: &mut ViewContext<Self>) {
@@ -19809,6 +19809,10 @@ impl TypedActionView for Workspace {
             OpenCRM => {
                 let url = Self::webview_resource_url("crm.html");
                 self.add_tab_for_webview("CRM", &url, ctx);
+            }
+            OpenInterview => {
+                let url = Self::webview_resource_url("interview.html");
+                self.add_tab_for_webview("Interview", &url, ctx);
             }
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)

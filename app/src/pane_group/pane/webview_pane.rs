@@ -66,20 +66,20 @@ impl PaneContent for WebViewPane {
         // Create native WKWebView and add to window content view
         #[cfg(target_os = "macos")]
         {
-            use cocoa::foundation::{NSPoint, NSRect, NSSize};
+            use cocoa::appkit::NSView;
+            use cocoa::foundation::NSRect;
             use warpui::platform::mac::webview::HeliosWebView;
             use warpui::platform::mac::content_view_from_platform_window;
 
             let window_id = ctx.window_id();
             if let Some(platform_window) = ctx.windows().platform_window(window_id) {
                 if let Some(content_view) = content_view_from_platform_window(platform_window.as_ref()) {
-                    // Start with a reasonable default frame — will be updated on layout
-                    let frame = NSRect::new(
-                        NSPoint::new(0.0, 0.0),
-                        NSSize::new(800.0, 600.0),
-                    );
-                    let webview = HeliosWebView::new(frame, Some(&self.url));
+                    // Use the content view's full bounds as the initial frame so the
+                    // webview fills the window immediately (autoresize handles future resizes).
+                    let frame: NSRect = unsafe { NSView::bounds(content_view) };
+                    let webview = HeliosWebView::new(frame, Some(&self.url), None, std::ptr::null_mut());
                     webview.add_to_view(content_view);
+                    webview.set_autoresize();
                     *self.native_webview.borrow_mut() = Some(webview);
                 }
             }
@@ -116,6 +116,21 @@ impl PaneContent for WebViewPane {
     fn focus(&self, ctx: &mut ViewContext<PaneGroup>) {
         self.view.as_ref(ctx).child(ctx)
             .update(ctx, |view, ctx| view.focus_contents(ctx));
+
+        // Also make the native WKWebView first responder so it receives keyboard input
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(ref webview) = *self.native_webview.borrow() {
+                let native = webview.native_id();
+                unsafe {
+                    use objc::{msg_send, sel, sel_impl};
+                    let window: cocoa::base::id = msg_send![native, window];
+                    if !window.is_null() {
+                        let _: () = msg_send![window, makeFirstResponder: native];
+                    }
+                }
+            }
+        }
     }
 
     fn shareable_link(

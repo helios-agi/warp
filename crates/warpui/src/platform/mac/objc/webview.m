@@ -1,30 +1,52 @@
 #import "webview.h"
 
-// Global IPC callback pointer (set from Rust)
-static helios_webview_ipc_callback _ipc_callback = NULL;
+// Shared process pool for all webviews (memory/process efficiency)
+static WKProcessPool* _sharedProcessPool = nil;
 
-// Message handler delegate
-@interface HeliosMessageHandler : NSObject <WKScriptMessageHandler>
+static WKProcessPool* sharedProcessPool(void) {
+    if (!_sharedProcessPool) {
+        _sharedProcessPool = [[WKProcessPool alloc] init];
+    }
+    return _sharedProcessPool;
+}
+
+// Message handler delegate — stores per-instance callback and context pointer
+@interface WarpWebViewMessageHandler : NSObject <WKScriptMessageHandler> {
+    warp_webview_ipc_callback _callback;
+    void* _context;
+}
+- (instancetype)initWithCallback:(warp_webview_ipc_callback)callback context:(void*)context;
 @end
 
-@implementation HeliosMessageHandler
+@implementation WarpWebViewMessageHandler
+- (instancetype)initWithCallback:(warp_webview_ipc_callback)callback context:(void*)context {
+    self = [super init];
+    if (self) {
+        _callback = callback;
+        _context = context;
+    }
+    return self;
+}
+
 - (void)userContentController:(WKUserContentController *)controller
       didReceiveScriptMessage:(WKScriptMessage *)message {
-    if (_ipc_callback && [message.body isKindOfClass:[NSString class]]) {
+    if (_callback && [message.body isKindOfClass:[NSString class]]) {
         const char* body = [(NSString*)message.body UTF8String];
-        _ipc_callback(body);
+        _callback(_context, body);
     }
 }
 @end
 
-static HeliosMessageHandler* _handler = nil;
-
-id helios_webview_create(NSRect frame, const char* initial_url) {
+id warp_webview_create(NSRect frame, const char* initial_url,
+                       warp_webview_ipc_callback callback, void* context) {
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
 
-    // Set up IPC message handler
-    _handler = [[HeliosMessageHandler alloc] init];
-    [config.userContentController addScriptMessageHandler:_handler name:@"helios"];
+    // Use shared process pool for memory efficiency
+    config.processPool = sharedProcessPool();
+
+    // Set up per-instance IPC message handler
+    WarpWebViewMessageHandler* handler = [[WarpWebViewMessageHandler alloc] initWithCallback:callback context:context];
+    [config.userContentController addScriptMessageHandler:handler name:@"helios"];
 
     // Inject IPC bridge script
     NSString* bridge = @"window.helios = { postMessage: function(msg) { "
@@ -54,8 +76,17 @@ id helios_webview_create(NSRect frame, const char* initial_url) {
                 url = [NSURL URLWithString:encoded];
             }
             if (url) {
-                NSURL* dir = [url URLByDeletingLastPathComponent];
-                [webview loadFileURL:url allowingReadAccessToDirectory:dir];
+                // Restrict read access to the webviews/ bundle directory only
+                NSString* webviewsDir = [[[NSBundle mainBundle] resourceURL]
+                    URLByAppendingPathComponent:@"webviews"].path;
+                NSURL* allowedDir;
+                if (webviewsDir && [[NSFileManager defaultManager] fileExistsAtPath:webviewsDir]) {
+                    allowedDir = [NSURL fileURLWithPath:webviewsDir];
+                } else {
+                    // Fallback to file's own directory (dev builds)
+                    allowedDir = [url URLByDeletingLastPathComponent];
+                }
+                [webview loadFileURL:url allowingReadAccessToDirectory:allowedDir];
             }
         } else {
             NSURL* url = [NSURL URLWithString:urlStr];
@@ -74,7 +105,7 @@ id helios_webview_create(NSRect frame, const char* initial_url) {
     return webview;
 }
 
-void helios_webview_load_url(id webview, const char* url) {
+void warp_webview_load_url(id webview, const char* url) {
     NSString* urlStr = [NSString stringWithUTF8String:url];
     NSURL* nsurl = [NSURL URLWithString:urlStr];
     if (!nsurl) {
@@ -85,41 +116,46 @@ void helios_webview_load_url(id webview, const char* url) {
     if (!nsurl) return; // Invalid URL, skip
     
     if ([urlStr hasPrefix:@"file://"]) {
-        NSURL* dir = [nsurl URLByDeletingLastPathComponent];
-        [(WKWebView*)webview loadFileURL:nsurl allowingReadAccessToDirectory:dir];
+        // Restrict read access to the webviews/ bundle directory only
+        NSString* webviewsDir = [[[NSBundle mainBundle] resourceURL]
+            URLByAppendingPathComponent:@"webviews"].path;
+        NSURL* allowedDir;
+        if (webviewsDir && [[NSFileManager defaultManager] fileExistsAtPath:webviewsDir]) {
+            allowedDir = [NSURL fileURLWithPath:webviewsDir];
+        } else {
+            // Fallback to file's own directory (dev builds)
+            allowedDir = [nsurl URLByDeletingLastPathComponent];
+        }
+        [(WKWebView*)webview loadFileURL:nsurl allowingReadAccessToDirectory:allowedDir];
     } else {
         NSURLRequest* req = [NSURLRequest requestWithURL:nsurl];
         [(WKWebView*)webview loadRequest:req];
     }
 }
 
-void helios_webview_load_html(id webview, const char* html) {
+void warp_webview_load_html(id webview, const char* html) {
     NSString* htmlStr = [NSString stringWithUTF8String:html];
     [(WKWebView*)webview loadHTMLString:htmlStr baseURL:nil];
 }
 
-void helios_webview_set_frame(id webview, NSRect frame) {
+void warp_webview_set_frame(id webview, NSRect frame) {
     [(WKWebView*)webview setFrame:frame];
 }
 
-void helios_webview_add_to_view(id webview, id parent_view) {
+void warp_webview_add_to_view(id webview, id parent_view) {
     [(NSView*)parent_view addSubview:(WKWebView*)webview];
 }
 
-void helios_webview_remove(id webview) {
+void warp_webview_remove(id webview) {
     [(WKWebView*)webview removeFromSuperview];
 }
 
-void helios_webview_eval_js(id webview, const char* js) {
+void warp_webview_eval_js(id webview, const char* js) {
     NSString* jsStr = [NSString stringWithUTF8String:js];
     [(WKWebView*)webview evaluateJavaScript:jsStr completionHandler:nil];
 }
 
-void helios_webview_set_ipc_callback(helios_webview_ipc_callback callback) {
-    _ipc_callback = callback;
-}
-
-void helios_webview_release(id webview) {
+void warp_webview_release(id webview) {
     WKWebView* wv = (WKWebView*)webview;
     // Remove message handler to break retain cycle
     [wv.configuration.userContentController removeScriptMessageHandlerForName:@"helios"];
@@ -128,4 +164,9 @@ void helios_webview_release(id webview) {
     #if !__has_feature(objc_arc)
     [wv release];
     #endif
+}
+
+void warp_webview_set_autoresize(id webview) {
+    WKWebView* wv = (WKWebView*)webview;
+    wv.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 }
