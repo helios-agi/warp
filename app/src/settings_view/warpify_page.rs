@@ -537,7 +537,7 @@ impl TitleWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.helios-terminal.dev/terminal/features/subshells",
+                "https://docs.warp.dev/terminal/features/subshells",
             ),
         ];
 
@@ -746,7 +746,7 @@ impl SettingsWidget for SSHWidget {
                     Some(AdditionalInfo {
                         mouse_state: self.additional_info_mouse_state.clone(),
                         on_click_action: Some(WarpifyPageAction::OpenUrl(
-                            "https://docs.helios-terminal.dev/terminal/features/ssh".into(),
+                            "https://docs.warp.dev/terminal/features/ssh".into(),
                         )),
                         secondary_text: None,
                         tooltip_override_text: None,
