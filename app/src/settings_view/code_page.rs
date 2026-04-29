@@ -1181,6 +1181,7 @@ impl CodePageWidget {
             PersistedWorkspace::as_ref(app).workspaces().collect();
 
         if workspaces.is_empty() {
+            let indexed_projects = query_memgraph_indexed_projects();
             let detected = detect_project_folders();
 
             // Informational description
@@ -1200,11 +1201,12 @@ impl CodePageWidget {
                 .finish(),
             );
 
-            if !detected.is_empty() {
+            // Show indexed projects from Memgraph
+            if !indexed_projects.is_empty() {
                 content.add_child(
                     Container::new(
                         ui_builder
-                            .span("Detected projects:")
+                            .span("Indexed Codebases (Memgraph):")
                             .with_style(UiComponentStyles {
                                 font_weight: Some(Weight::Semibold),
                                 font_color: Some(theme.active_ui_text_color().into()),
@@ -1218,15 +1220,61 @@ impl CodePageWidget {
                     .finish(),
                 );
 
-                for project_path in detected {
+                for project_path in &indexed_projects {
+                    let text = format!("  ✓  {}", project_path);
                     content.add_child(
                         Container::new(
                             appearance
                                 .ui_builder()
-                                .paragraph(format!(
-                                    "  •  {} — available to index",
-                                    project_path
-                                ))
+                                .paragraph(text)
+                                .with_style(UiComponentStyles {
+                                    font_color: Some(ColorU::new(0x4a, 0xde, 0x80, 0xff).into()),
+                                    ..Default::default()
+                                })
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_bottom(4.0)
+                        .finish(),
+                    );
+                }
+            }
+
+            // Show available to index projects (detected minus indexed)
+            let available: Vec<String> = detected
+                .into_iter()
+                .filter(|p| !indexed_projects.contains(p))
+                .collect();
+
+            if !available.is_empty() {
+                content.add_child(
+                    Container::new(
+                        ui_builder
+                            .span("Available to Index:")
+                            .with_style(UiComponentStyles {
+                                font_weight: Some(Weight::Semibold),
+                                font_color: Some(theme.active_ui_text_color().into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .with_margin_top(8.0)
+                    .with_margin_bottom(6.0)
+                    .finish(),
+                );
+
+                for project_path in available {
+                    let text = format!("  ○  {}", project_path);
+                    content.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .paragraph(text)
+                                .with_style(UiComponentStyles {
+                                    font_color: Some(theme.disabled_ui_text_color().into()),
+                                    ..Default::default()
+                                })
                                 .build()
                                 .finish(),
                         )
@@ -2513,6 +2561,43 @@ impl SettingsWidget for GlobalSearchToggleWidget {
 /// Detects git repositories in the user's home directory top-level folders.
 /// Returns a sorted list of absolute paths to detected git repositories,
 /// shown as "available to index" suggestions when no workspaces are initialized.
+/// Query Memgraph for indexed projects via mgconsole.
+/// Returns a list of project paths that have been indexed.
+fn query_memgraph_indexed_projects() -> Vec<String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let output = Command::new("docker")
+        .args(["exec", "helios-memgraph", "mgconsole", "--no-history", "--output-format=csv"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()
+        .and_then(|mut child| {
+            if let Some(ref mut stdin) = child.stdin {
+                let query = "MATCH (p:Project) RETURN p.path ORDER BY p.path;\n";
+                let _ = stdin.write_all(query.as_bytes());
+            }
+            child.wait_with_output().ok()
+        });
+
+    let mut projects = Vec::new();
+    if let Some(output) = output {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().skip(1) {
+                // Skip CSV header
+                let path = line.trim().trim_matches('"');
+                if !path.is_empty() && path.starts_with('/') {
+                    projects.push(path.to_string());
+                }
+            }
+        }
+    }
+    projects
+}
+
 fn detect_project_folders() -> Vec<String> {
     let home = std::env::var("HOME").unwrap_or_default();
     let mut projects = Vec::new();
