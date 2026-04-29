@@ -13,6 +13,7 @@ pub(super) mod rendering;
 mod text_layout;
 pub mod utils;
 mod window;
+pub mod webview;
 
 pub use app::{App, AppExt};
 pub use delegate::{AppDelegate, IntegrationTestDelegate};

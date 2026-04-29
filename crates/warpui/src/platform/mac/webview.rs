@@ -1,0 +1,72 @@
+use cocoa::base::id;
+use cocoa::foundation::NSRect;
+use std::ffi::CString;
+use std::os::raw::c_char;
+
+// FFI declarations matching webview.h
+extern "C" {
+    fn helios_webview_create(frame: NSRect, initial_url: *const c_char) -> id;
+    fn helios_webview_load_url(webview: id, url: *const c_char);
+    fn helios_webview_load_html(webview: id, html: *const c_char);
+    fn helios_webview_set_frame(webview: id, frame: NSRect);
+    fn helios_webview_add_to_view(webview: id, parent_view: id);
+    fn helios_webview_remove(webview: id);
+    fn helios_webview_eval_js(webview: id, js: *const c_char);
+    fn helios_webview_set_ipc_callback(callback: extern "C" fn(*const c_char));
+}
+
+/// Safe wrapper around WKWebView
+pub struct HeliosWebView {
+    native: id,
+}
+
+impl HeliosWebView {
+    pub fn new(frame: NSRect, url: Option<&str>) -> Self {
+        let c_url = url.map(|u| CString::new(u).unwrap());
+        let ptr = c_url.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null());
+        let native = unsafe { helios_webview_create(frame, ptr) };
+        Self { native }
+    }
+
+    pub fn load_url(&self, url: &str) {
+        let c_url = CString::new(url).unwrap();
+        unsafe { helios_webview_load_url(self.native, c_url.as_ptr()) };
+    }
+
+    pub fn load_html(&self, html: &str) {
+        let c_html = CString::new(html).unwrap();
+        unsafe { helios_webview_load_html(self.native, c_html.as_ptr()) };
+    }
+
+    pub fn set_frame(&self, frame: NSRect) {
+        unsafe { helios_webview_set_frame(self.native, frame) };
+    }
+
+    pub fn add_to_view(&self, parent: id) {
+        unsafe { helios_webview_add_to_view(self.native, parent) };
+    }
+
+    pub fn remove(&self) {
+        unsafe { helios_webview_remove(self.native) };
+    }
+
+    pub fn eval_js(&self, js: &str) {
+        let c_js = CString::new(js).unwrap();
+        unsafe { helios_webview_eval_js(self.native, c_js.as_ptr()) };
+    }
+
+    pub fn native_id(&self) -> id {
+        self.native
+    }
+}
+
+impl Drop for HeliosWebView {
+    fn drop(&mut self) {
+        self.remove();
+    }
+}
+
+/// Set the global IPC callback
+pub fn set_ipc_callback(callback: extern "C" fn(*const c_char)) {
+    unsafe { helios_webview_set_ipc_callback(callback) };
+}
