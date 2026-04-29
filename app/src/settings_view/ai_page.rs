@@ -3090,7 +3090,7 @@ impl SettingsWidget for GlobalAIWidget {
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(
                 Text::new_inline(
-                    "Warp Agent",
+                    "Helios Agent",
                     appearance.ui_font_family(),
                     PRIMARY_HEADER_FONT_SIZE,
                 )
@@ -3116,58 +3116,25 @@ impl SettingsWidget for GlobalAIWidget {
             );
         }
 
-        // Show sign-up button for anonymous users, toggle for logged-in users
+        // Show Helios Agent status message
         if is_anonymous {
             row.add_child(
-                Flex::row()
-                    .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                    .with_child(
-                        Container::new(
-                            Text::new_inline(
-                                "To use AI features, please create an account.",
-                                appearance.ui_font_family(),
-                                14.,
-                            )
-                            .with_color(
-                                appearance
-                                    .theme()
-                                    .sub_text_color(appearance.theme().surface_2())
-                                    .into_solid(),
-                            )
-                            .finish(),
-                        )
-                        .with_margin_right(16.)
-                        .finish(),
+                Container::new(
+                    Text::new_inline(
+                        "Helios Agent is active. Configure your AI models and behaviors below.",
+                        appearance.ui_font_family(),
+                        14.,
                     )
-                    .with_child(
-                        Container::new(
-                            ui_builder
-                                .button(ButtonVariant::Accent, self.sign_up_button.clone())
-                                .with_style(UiComponentStyles {
-                                    font_size: Some(14.),
-                                    font_weight: Some(Weight::Semibold),
-                                    border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.))),
-                                    padding: Some(Coords {
-                                        top: 8.,
-                                        bottom: 8.,
-                                        left: 24.,
-                                        right: 24.,
-                                    }),
-                                    ..Default::default()
-                                })
-                                .with_text_label("Sign up".to_owned())
-                                .build()
-                                .on_click(move |ctx, _, _| {
-                                    ctx.dispatch_typed_action(
-                                        AISettingsPageAction::SignupAnonymousUser,
-                                    );
-                                })
-                                .finish(),
-                        )
-                        .with_padding_right(TOGGLE_BUTTON_RIGHT_PADDING)
-                        .finish(),
+                    .with_color(
+                        appearance
+                            .theme()
+                            .sub_text_color(appearance.theme().surface_2())
+                            .into_solid(),
                     )
                     .finish(),
+                )
+                .with_margin_right(16.)
+                .finish(),
             );
         } else {
             row.add_child(
@@ -3826,6 +3793,11 @@ impl SettingsWidget for AgentsWidget {
                     .with_margin_bottom(8.)
                     .finish(),
             );
+            column.add_child(
+                Container::new(self.render_feynman_agents_section(appearance, app))
+                    .with_margin_bottom(8.)
+                    .finish(),
+            );
         } else {
             // Legacy layout: show Agents header + Models + Permissions
             let mut agents_header = Flex::column();
@@ -3858,6 +3830,11 @@ impl SettingsWidget for AgentsWidget {
                     .with_margin_bottom(8.)
                     .finish(),
             ]);
+            column.add_child(
+                Container::new(self.render_feynman_agents_section(appearance, app))
+                    .with_margin_bottom(8.)
+                    .finish(),
+            );
         };
 
         column.finish()
@@ -3924,6 +3901,88 @@ impl AgentsWidget {
         }
 
         Flex::column().with_children(profile_elements).finish()
+    }
+
+    fn render_feynman_agents_section(
+        &self,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let ai_settings = AISettings::as_ref(app);
+        let is_any_ai_enabled = ai_settings.is_any_ai_enabled(app);
+        let font_color = styles::header_font_color(is_any_ai_enabled, app);
+        let desc_color = styles::description_font_color(is_any_ai_enabled, app);
+        let font_family = appearance.ui_font_family();
+
+        let header = Container::new(render_custom_size_header(
+            appearance,
+            "Helios Agent Network",
+            14.0,
+            Some(font_color),
+        ))
+        .with_margin_bottom(4.0)
+        .finish();
+
+        let description = Container::new(
+            render_ai_setting_description(
+                "The Feynman agents that power Helios orchestration. Each agent specializes in a distinct phase of the development workflow.",
+                is_any_ai_enabled,
+                app,
+            )
+        )
+        .with_margin_bottom(8.)
+        .finish();
+
+        let agents: [(&str, &str, &str); 7] = [
+            ("Arline (scout)", "Reconnaissance", "Codebase mapping, pattern matching, anomaly detection"),
+            ("Wheeler (planner)", "Planning", "Task decomposition, estimation, interview"),
+            ("Dyson (worker)", "Implementation", "TDD, git commit, debugging"),
+            ("Murray (reviewer)", "Review", "Adversarial review, security scan"),
+            ("Hans (verifier)", "Verification", "Invariant check, data flow trace"),
+            ("Dirac (auditor)", "Audit", "Claim verification, ground truth"),
+            ("Tukey (researcher)", "Research", "Web search, source evaluation"),
+        ];
+
+        let mut column = Flex::column()
+            .with_child(header)
+            .with_child(description);
+
+        for (name, role, desc) in agents {
+            let name_label = Text::new_inline(name, font_family, CONTENT_FONT_SIZE)
+                .with_style(Properties::default().weight(Weight::Bold))
+                .with_color(font_color.into())
+                .finish();
+
+            let role_label = Container::new(
+                Text::new_inline(role, font_family, CONTENT_FONT_SIZE)
+                    .with_color(desc_color.into())
+                    .finish(),
+            )
+            .with_margin_left(8.)
+            .finish();
+
+            let desc_label = Container::new(
+                Text::new_inline(desc, font_family, CONTENT_FONT_SIZE)
+                    .with_color(desc_color.into())
+                    .finish(),
+            )
+            .with_margin_left(8.)
+            .finish();
+
+            let row = Container::new(
+                Flex::row()
+                    .with_child(ConstrainedBox::new(name_label).with_min_width(140.).finish())
+                    .with_child(ConstrainedBox::new(role_label).with_min_width(110.).finish())
+                    .with_child(desc_label)
+                    .finish(),
+            )
+            .with_margin_bottom(4.)
+            .finish();
+
+            column.add_child(row);
+        }
+
+        column.finish()
     }
 
     fn render_models_section(
@@ -4197,7 +4256,7 @@ impl AgentsWidget {
         );
         render_ai_list(
             "Command denylist",
-            "Regular expressions to match commands that the Warp Agent should always ask permission to execute.",
+            "Regular expressions to match commands that the Helios Agent should always ask permission to execute.",
             list,
             view,
             ai_settings,
@@ -4230,7 +4289,7 @@ impl AgentsWidget {
 
         render_ai_list(
             "Command allowlist",
-            "Regular expressions to match commands that can be automatically executed by the Warp Agent.",
+            "Regular expressions to match commands that can be automatically executed by the Helios Agent.",
             list,
             view,
             ai_settings,
@@ -4330,7 +4389,7 @@ impl AgentsWidget {
             appearance,
             "Base model",
             Some(
-                "This model serves as the primary engine behind the Warp Agent. It powers most interactions and invokes other models for tasks like planning or code generation when necessary. Warp may automatically switch to alternate models based on model availability or for auxiliary tasks such as conversation summarization.",
+                "This model serves as the primary engine behind the Helios Agent. It powers most interactions and invokes other models for tasks like planning or code generation when necessary. Helios may automatically switch to alternate models based on model availability or for auxiliary tasks such as conversation summarization.",
             ),
             Some(show_in_prompt_checkbox),
             LocalOnlyIconState::Hidden,
@@ -4361,7 +4420,7 @@ impl AgentsWidget {
 
         let codebase_context_description = vec![
             FormattedTextFragment::plain_text(
-                "Allow the Warp Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ",
+                "Allow the Helios Agent to generate an outline of your codebase that can be used for context. No code is ever stored on our servers. ",
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
@@ -4434,7 +4493,7 @@ impl AgentsWidget {
         let subtext = {
             let subtext_fragments = vec![
                 FormattedTextFragment::plain_text(
-                    "You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Warp Agent has when interacting with them. ",
+                    "You haven't added any MCP servers yet. Once you do, you'll be able to control how much autonomy the Helios Agent has when interacting with them. ",
                 ),
                 FormattedTextFragment::hyperlink_action(
                     "Add a server",
@@ -4515,7 +4574,7 @@ impl AgentsWidget {
         {
             let allowlist = self.render_mcp_list(
                 "MCP allowlist",
-                "Allow the Warp Agent to call these MCP servers.",
+                "Allow the Helios Agent to call these MCP servers.",
                 &view.mcp_allowlist_dropdown,
                 BlocklistAIPermissions::as_ref(app).get_mcp_allowlist(app, None),
                 view.mcp_allowlist_mouse_state_handles.clone(),
@@ -4532,7 +4591,7 @@ impl AgentsWidget {
         {
             let denylist = self.render_mcp_list(
                 "MCP denylist",
-                "The Warp Agent will always ask for permission before calling any MCP servers on this list.",
+                "The Helios Agent will always ask for permission before calling any MCP servers on this list.",
                 &view.mcp_denylist_dropdown,
                 BlocklistAIPermissions::as_ref(app).get_mcp_denylist(app, None),
                 view.mcp_denylist_mouse_state_handles.clone(),
@@ -4902,7 +4961,7 @@ impl SettingsWidget for MCPServersWidget {
 
         let mcp_description = vec![
             FormattedTextFragment::plain_text(
-                "Add MCP servers to extend the Warp Agent's capabilities. \
+                "Add MCP servers to extend the Helios Agent's capabilities. \
             MCP servers expose data sources or tools to agents through a standardized interface, essentially acting like plugins. ",
             ),
             FormattedTextFragment::hyperlink(
@@ -5034,7 +5093,7 @@ impl AIFactWidget {
 
         let rules_description = vec![
             FormattedTextFragment::plain_text(
-                "Rules help the Warp Agent follow your conventions, whether for codebases or specific workflows. ",
+                "Rules help the Helios Agent follow your conventions, whether for codebases or specific workflows. ",
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
@@ -5112,7 +5171,7 @@ impl AIFactWidget {
         );
 
         let description = render_ai_setting_description(
-            "The Warp Agent can leverage your Warp Drive Contents to tailor responses to your personal and team developer workflows and environments. This includes any Workflows, Notebooks, and Environment Variables.",
+            "The Helios Agent can leverage your Warp Drive Contents to tailor responses to your personal and team developer workflows and environments. This includes any Workflows, Notebooks, and Environment Variables.",
             ai_settings.is_any_ai_enabled(app),
             app,
         );
@@ -6097,7 +6156,7 @@ impl ApiKeysWidget {
             .with_child(
                 Container::new(
                     render_ai_setting_description(
-                        "Use your own API keys from model providers for the Warp Agent to use. API keys are stored locally and never synced to the cloud. Using auto models or models from providers you have not provided API keys for will consume Warp credits.",
+                        "Use your own API keys from model providers for the Helios Agent to use. API keys are stored locally and never synced to the cloud. Using auto models or models from providers you have not provided API keys for will consume Warp credits.",
                         is_enabled,
                         app,
                     ))
