@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# =============================================================================
+# helios-terminal-upgrade — Build & install Helios Terminal for Apple Silicon
+# =============================================================================
+# Usage:
+#   helios upgrade            (from helios CLI)
+#   ./script/helios-upgrade   (from repo root)
+#
+# Prerequisites: Rust toolchain, Xcode Command Line Tools
+# =============================================================================
+set -euo pipefail
+
+BOLD="\033[1m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RED="\033[31m"
+DIM="\033[2m"
+RESET="\033[0m"
+
+REPO_DIR="${HELIOS_TERMINAL_DIR:-$HOME/helios-terminal}"
+APP_NAME="Helios Terminal"
+BUNDLE_ID="dev.helios.terminal"
+APP_DEST="/Applications/${APP_NAME}.app"
+ICON_SRC="$HOME/familiar/apps/helios-desktop/src/assets/images/helios/helios.icns"
+SUPPORT_DIR="$HOME/Library/Application Support/${BUNDLE_ID}"
+
+log()  { echo -e "${GREEN}▸${RESET} $*"; }
+warn() { echo -e "${YELLOW}▸${RESET} $*"; }
+err()  { echo -e "${RED}✗${RESET} $*" >&2; }
+step() { echo -e "\n${BOLD}[$1/$TOTAL] $2${RESET}"; }
+
+TOTAL=7
+
+# ─── Preflight ────────────────────────────────────────────────────────────────
+if [[ "$(uname -m)" != "arm64" ]]; then
+  err "This script targets Apple Silicon (arm64). Detected: $(uname -m)"
+  exit 1
+fi
+
+if [[ ! -d "$REPO_DIR" ]]; then
+  err "Helios Terminal repo not found at $REPO_DIR"
+  err "Clone it first: gh repo clone helios-agi/warp $REPO_DIR"
+  exit 1
+fi
+
+cd "$REPO_DIR"
+
+# ─── Step 1: Pull latest ─────────────────────────────────────────────────────
+step 1 "Pull latest from origin/master"
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" != "master" ]]; then
+  warn "On branch '$CURRENT_BRANCH', switching to master"
+  git stash -q 2>/dev/null || true
+  git checkout master -q
+fi
+git pull origin master -q
+COMMIT=$(git rev-parse --short HEAD)
+log "At commit ${COMMIT}"
+
+# ─── Step 2: Verify toolchain ────────────────────────────────────────────────
+step 2 "Verify build environment"
+if ! command -v cargo &>/dev/null; then
+  err "Rust not installed. Run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+  exit 1
+fi
+if ! command -v xcode-select &>/dev/null; then
+  err "Xcode CLT not installed. Run: xcode-select --install"
+  exit 1
+fi
+RUST_V=$(rustc --version | awk '{print $2}')
+log "Rust ${RUST_V}, target aarch64-apple-darwin"
+
+# ─── Step 3: Build ────────────────────────────────────────────────────────────
+step 3 "Build helios-terminal (release)"
+BUILD_START=$(date +%s)
+
+# Use release for distribution, debug for dev
+BUILD_PROFILE="${HELIOS_BUILD_PROFILE:-debug}"
+if [[ "$BUILD_PROFILE" == "release" ]]; then
+  CARGO_FLAGS="--release"
+  TARGET_DIR="target/release"
+else
+  CARGO_FLAGS=""
+  TARGET_DIR="target/debug"
+fi
+
+cd app
+cargo bundle --bin helios-terminal $CARGO_FLAGS 2>&1 | tail -5
+cd ..
+
+BUILD_END=$(date +%s)
+BUILD_TIME=$((BUILD_END - BUILD_START))
+BUNDLE_PATH="${TARGET_DIR}/bundle/osx/helios-terminal.app"
+
+if [[ ! -d "$BUNDLE_PATH" ]]; then
+  err "Build failed — bundle not found at $BUNDLE_PATH"
+  exit 1
+fi
+log "Built in ${BUILD_TIME}s"
+
+# ─── Step 4: Patch bundle metadata ───────────────────────────────────────────
+step 4 "Patch bundle metadata"
+PLIST="${BUNDLE_PATH}/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName '${APP_NAME}'" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleName '${APP_NAME}'" "$PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier '${BUNDLE_ID}'" "$PLIST" 2>/dev/null || true
+log "Display name: ${APP_NAME}, bundle ID: ${BUNDLE_ID}"
+
+# ─── Step 5: Install icon + webview resources ────────────────────────────────
+step 5 "Install resources"
+if [[ -f "$ICON_SRC" ]]; then
+  cp "$ICON_SRC" "${BUNDLE_PATH}/Contents/Resources/helios-terminal.icns"
+  log "Helios icon installed"
+else
+  warn "Icon not found at $ICON_SRC (skipping)"
+fi
+
+# Copy webview HTML/CSS resources
+if [[ -d "app/resources/webviews" ]]; then
+  mkdir -p "${BUNDLE_PATH}/Contents/Resources/webviews/css"
+  cp app/resources/webviews/*.html "${BUNDLE_PATH}/Contents/Resources/webviews/" 2>/dev/null || true
+  cp app/resources/webviews/css/*.css "${BUNDLE_PATH}/Contents/Resources/webviews/css/" 2>/dev/null || true
+  log "WebView resources copied"
+fi
+
+# ─── Step 6: Install to /Applications ─────────────────────────────────────────
+step 6 "Install to /Applications"
+# Kill running instances
+if pgrep -f "helios-terminal" &>/dev/null; then
+  warn "Killing running Helios Terminal..."
+  pkill -f "helios-terminal" 2>/dev/null || true
+  sleep 2
+fi
+
+# Clear stale app state (optional — uncomment to reset on every upgrade)
+# rm -f "${SUPPORT_DIR}/warp.sqlite"*
+
+# Install
+rm -rf "$APP_DEST"
+cp -R "$BUNDLE_PATH" "$APP_DEST"
+log "Installed to ${APP_DEST}"
+
+# ─── Step 7: Launch ──────────────────────────────────────────────────────────
+step 7 "Launch"
+open "$APP_DEST"
+log "Helios Terminal launched"
+
+# ─── Summary ──────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${BOLD}${GREEN}✅ Helios Terminal upgraded${RESET}"
+echo -e "${DIM}   commit:  ${COMMIT}${RESET}"
+echo -e "${DIM}   build:   ${BUILD_TIME}s (${BUILD_PROFILE})${RESET}"
+echo -e "${DIM}   arch:    Apple Silicon (arm64)${RESET}"
+echo -e "${DIM}   path:    ${APP_DEST}${RESET}"
