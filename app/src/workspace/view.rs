@@ -3585,7 +3585,8 @@ impl Workspace {
                         ctx,
                     );
                 } else if self.left_panel_visibility_across_tabs_enabled(ctx) {
-                    self.left_panel_open = restored_left_panel_open;
+                    // Helios: always open left panel (project explorer)
+                    self.left_panel_open = true;
                 }
 
                 self.activate_tab_internal(active_tab_index, ctx);
