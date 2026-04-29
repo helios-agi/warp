@@ -24,8 +24,9 @@ pub struct HeliosConfig {
 
 impl Default for HeliosConfig {
     fn default() -> Self {
-        let pi_binary = which::which("pi")
-            .unwrap_or_else(|_| PathBuf::from("pi"));
+        let pi_binary = which::which("helios")
+            .or_else(|_| which::which("pi"))
+            .unwrap_or_else(|_| PathBuf::from("helios"));
 
         let pi_home = dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("."))

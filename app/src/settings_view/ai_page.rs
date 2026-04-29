@@ -157,6 +157,10 @@ const GIT_OPERATIONS_AUTOGEN_DESCRIPTION: &str =
     "Let AI generate commit messages and pull request titles and descriptions.";
 const WISPR_FLOW_URL: &str = "https://wisprflow.ai/";
 
+// Cache agent definitions loaded from ~/.pi/agent/agents/*.md
+// This prevents blocking I/O (6.7ms) on every render of the AI settings page.
+static CACHED_AGENT_DEFINITIONS: LazyLock<Vec<(String, String, String)>> = LazyLock::new(load_agent_definitions);
+
 pub fn init_actions_from_parent_view<T: Action + Clone>(
     app: &mut AppContext,
     context: &ContextPredicate,
@@ -3059,7 +3063,6 @@ fn render_ai_list(
 #[derive(Default)]
 struct GlobalAIWidget {
     switch_state: SwitchStateHandle,
-    sign_up_button: MouseStateHandle,
 }
 
 impl SettingsWidget for GlobalAIWidget {
@@ -3924,7 +3927,7 @@ impl AgentsWidget {
         .finish();
 
         let display_agents: Vec<(String, String, String)> = {
-            let loaded = load_agent_definitions();
+            let loaded = CACHED_AGENT_DEFINITIONS.clone();
             if loaded.is_empty() {
                 vec![
                     ("Arline (scout)".into(), "Reconnaissance".into(), "Codebase mapping, pattern matching, anomaly detection".into()),
@@ -5173,7 +5176,7 @@ impl AIFactWidget {
         app: &warpui::AppContext,
     ) -> Box<dyn Element> {
         let toggle = render_ai_setting_toggle::<WarpDriveContextEnabled>(
-            "Warp Drive as agent context",
+            "Helios Cloud as agent context",
             AISettingsPageAction::ToggleWarpDriveContext,
             *ai_settings.warp_drive_context_enabled,
             ai_settings.is_any_ai_enabled(app),
@@ -6168,7 +6171,7 @@ impl ApiKeysWidget {
             .with_child(
                 Container::new(
                     render_ai_setting_description(
-                        "Use your own API keys from model providers for the Helios Agent to use. API keys are stored locally and never synced to the cloud. Using auto models or models from providers you have not provided API keys for will consume Warp credits.",
+                        "Use your own API keys from model providers for the Helios Agent to use. API keys are stored locally and never synced to the cloud. Using auto models or models from providers you have not provided API keys for will consume Helios credits.",
                         is_enabled,
                         app,
                     ))
@@ -6306,7 +6309,7 @@ impl ApiKeysWidget {
         let ai_settings = AISettings::as_ref(app);
 
         let toggle = render_ai_setting_toggle::<CanUseWarpCreditsWithByok>(
-            "Warp credit fallback",
+            "Helios credit fallback",
             AISettingsPageAction::ToggleCanUseWarpCreditsWithByok,
             *ai_settings.can_use_warp_credits_with_byok,
             ai_settings.is_any_ai_enabled(app),
@@ -6588,9 +6591,9 @@ impl AwsBedrockWidget {
         let are_credentials_enabled = user_workspaces.is_aws_bedrock_credentials_enabled(app);
         let is_usage_enabled = is_section_enabled && are_credentials_enabled;
         let toggle_description = if is_admin_enforced {
-            "Warp loads and sends local AWS CLI credentials for Bedrock-supported models. This setting is managed by your organization.".to_string()
+            "Helios loads and sends local AWS CLI credentials for Bedrock-supported models. This setting is managed by your organization.".to_string()
         } else {
-            "Warp loads and sends local AWS CLI credentials for Bedrock-supported models."
+            "Helios loads and sends local AWS CLI credentials for Bedrock-supported models."
                 .to_string()
         };
 
@@ -6812,11 +6815,27 @@ impl SettingsWidget for AwsBedrockWidget {
 }
 
 fn extract_yaml_frontmatter(content: &str) -> Option<String> {
-    let trimmed = content.trim();
-    if trimmed.starts_with("---") {
-        if let Some(end_idx) = trimmed[3..].find("\n---") {
-            return Some(trimmed[3..3 + end_idx].to_string());
+    let t = content.trim();
+    // Must start with --- followed by newline
+    if !t.starts_with("---") {
+        return None;
+    }
+    
+    let after_open = if t.starts_with("---\r\n") {
+        &t[5..]
+    } else if t.starts_with("---\n") {
+        &t[4..]
+    } else {
+        return None;
+    };
+    
+    // Find a line that is exactly "---" (trimmed)
+    let mut pos = 0;
+    for line in after_open.lines() {
+        if line.trim() == "---" {
+            return Some(after_open[..pos].trim_end().to_string());
         }
+        pos += line.len() + 1; // +1 for \n
     }
     None
 }

@@ -131,7 +131,7 @@ impl CLIAgent {
             CLIAgent::Droid => "droid",
             CLIAgent::OpenCode => "opencode",
             CLIAgent::Copilot => "copilot",
-            CLIAgent::Pi => "pi",
+            CLIAgent::Pi => "helios",
             CLIAgent::Auggie => "auggie",
             CLIAgent::CursorCli => "agent",
             CLIAgent::Unknown => "",
@@ -161,7 +161,7 @@ impl CLIAgent {
             CLIAgent::Droid => "Droid",
             CLIAgent::OpenCode => "OpenCode",
             CLIAgent::Copilot => "Copilot",
-            CLIAgent::Pi => "Pi",
+            CLIAgent::Pi => "Helios",
             CLIAgent::Auggie => "Auggie",
             CLIAgent::CursorCli => "Cursor",
             CLIAgent::Unknown => "CLI Agent",
@@ -313,6 +313,8 @@ impl CLIAgent {
             .filter(|agent| !matches!(agent, CLIAgent::Unknown))
             .find(|agent| {
                 resolved_first_word == agent.command_prefix()
+                    || (matches!(agent, CLIAgent::Pi)
+                        && resolved_first_word == "pi")
                     || (matches!(agent, CLIAgent::Claude)
                         && Self::is_aifx_agent_run_claude(&resolved_command, ctx))
             })

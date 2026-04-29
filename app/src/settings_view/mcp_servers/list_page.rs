@@ -56,6 +56,7 @@ use crate::{
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use settings::ToggleableSetting as _;
 use std::cmp::Ordering;
+use std::sync::LazyLock;
 use std::{collections::HashMap, path::PathBuf};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
@@ -163,6 +164,10 @@ fn load_helios_mcp_servers() -> Vec<HeliosMCPServer> {
     servers.sort_by(|a, b| a.name.cmp(&b.name));
     servers
 }
+
+// Cache MCP servers loaded from ~/.pi/agent/mcp.json
+// This prevents blocking I/O on every render of the empty state.
+static CACHED_MCP_SERVERS: LazyLock<Vec<HeliosMCPServer>> = LazyLock::new(load_helios_mcp_servers);
 
 pub struct MCPServersListPageView {
     server_cards: HashMap<ServerCardItemId, ViewHandle<ServerCardView>>,
@@ -1567,7 +1572,7 @@ impl MCPServersListPageView {
         );
 
         // Load servers dynamically from mcp.json
-        let helios_servers = load_helios_mcp_servers();
+        let helios_servers = CACHED_MCP_SERVERS.clone();
         
         if helios_servers.is_empty() {
             // Fallback if no servers found

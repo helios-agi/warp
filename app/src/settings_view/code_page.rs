@@ -48,6 +48,7 @@ use pathfinder_color::ColorU;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 use warp_core::{
     features::FeatureFlag,
     report_if_error,
@@ -1181,8 +1182,8 @@ impl CodePageWidget {
             PersistedWorkspace::as_ref(app).workspaces().collect();
 
         if workspaces.is_empty() {
-            let indexed_projects = query_memgraph_indexed_projects();
-            let detected = detect_project_folders();
+            let indexed_projects = CACHED_INDEXED_PROJECTS.clone();
+            let detected = CACHED_DETECTED_PROJECTS.clone();
 
             // Informational description
             content.add_child(
@@ -2612,3 +2613,11 @@ fn detect_project_folders() -> Vec<String> {
     projects.sort();
     projects
 }
+
+// Cache Memgraph indexed projects query result.
+// This prevents blocking docker exec (28ms+) on every render.
+static CACHED_INDEXED_PROJECTS: LazyLock<Vec<String>> = LazyLock::new(query_memgraph_indexed_projects);
+
+// Cache detected project folders from home directory scan.
+// This prevents blocking filesystem I/O (71ms) on every render.
+static CACHED_DETECTED_PROJECTS: LazyLock<Vec<String>> = LazyLock::new(detect_project_folders);

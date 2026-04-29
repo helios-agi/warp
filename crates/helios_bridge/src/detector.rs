@@ -62,12 +62,13 @@ impl PiDetector {
 
     /// Returns `true` if the `pi` binary is found on PATH.
     pub fn is_pi_installed(&self) -> bool {
-        which::which("pi").is_ok()
+        which::which("helios").is_ok() || which::which("pi").is_ok()
     }
 
     /// Runs `pi --version` and returns the version string, if available.
     pub fn pi_version(&self) -> Option<String> {
-        self.pi_version_with_binary("pi")
+        self.pi_version_with_binary("helios")
+            .or_else(|| self.pi_version_with_binary("pi"))
     }
 
     /// Runs `<binary> --version` and returns the version string, if available.
@@ -95,7 +96,12 @@ impl PiDetector {
 
     /// Run all detection checks and return an overall [`PiStatus`].
     pub fn detect(&self) -> PiStatus {
-        self.detect_with_binary("pi")
+        let status = self.detect_with_binary("helios");
+        if status != PiStatus::NotInstalled {
+            status
+        } else {
+            self.detect_with_binary("pi")
+        }
     }
 
     /// Run detection with a custom binary name (for testing).
