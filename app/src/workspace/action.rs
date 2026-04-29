@@ -148,6 +148,12 @@ pub enum WorkspaceAction {
     AddAgentTab,
     /// Add a new tab running a local Docker sandbox via `sbx`.
     AddDockerSandboxTab,
+    OpenWebView {
+        url: String,
+        title: String,
+    },
+    OpenInbox,
+    OpenCRM,
     OpenNewSessionMenu {
         position: Vector2F,
     },
@@ -959,6 +965,7 @@ impl WorkspaceAction {
             #[cfg(feature = "local_fs")]
             FileDeleted { .. } => false, // File deletion doesn't change workspace state
             OpenEnvironmentManagementPane => false,
+            OpenWebView { .. } | OpenInbox | OpenCRM => false,
             #[cfg(target_os = "linux")]
             DismissWaylandCrashRecoveryBannerAndOpenLink => false,
             #[cfg(target_family = "wasm")]

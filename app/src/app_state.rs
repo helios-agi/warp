@@ -139,6 +139,7 @@ pub enum LeafContents {
     },
     /// A new first-time user experience which prioritizes choosing a coding repository.
     GetStarted,
+    WebView(WebViewPaneSnapshot),
 }
 
 #[cfg(feature = "local_fs")]
@@ -173,7 +174,8 @@ impl LeafContents {
             | LeafContents::CodeReview(_)
             | LeafContents::AmbientAgent(_)
             | LeafContents::Welcome { .. }
-            | LeafContents::GetStarted => true,
+            | LeafContents::GetStarted
+            | LeafContents::WebView(_) => true,
         }
     }
 }
@@ -185,6 +187,13 @@ pub struct AmbientAgentPaneSnapshot {
     // `task_id` is purposefully optional,
     // as you can have a valid state (i.e. an empty cloud mode pane) where it is None.
     pub task_id: Option<AmbientAgentTaskId>,
+}
+
+/// Snapshot of a WebView pane.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WebViewPaneSnapshot {
+    pub url: String,
+    pub title: String,
 }
 
 /// Snapshot of the contents of a terminal pane.

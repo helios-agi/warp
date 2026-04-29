@@ -66,7 +66,7 @@ use crate::ai_assistant::execution_context::WarpAiExecutionContext;
 use crate::app_state::{
     LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot,
     PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabSnapshot,
-    TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
+    TerminalPaneSnapshot, WebViewPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
 };
 use crate::code_review::diff_state::DiffStateModel;
 #[cfg(feature = "local_fs")]
@@ -10884,6 +10884,23 @@ impl Workspace {
         self.add_tab_with_pane_layout(panes_layout, Arc::new(HashMap::new()), None, ctx);
     }
 
+    pub fn add_tab_for_webview(&mut self, title: &str, url: &str, ctx: &mut ViewContext<Self>) {
+        self.add_tab_with_pane_layout(
+            PanesLayout::Snapshot(Box::new(PaneNodeSnapshot::Leaf(LeafSnapshot {
+                is_focused: true,
+                custom_vertical_tabs_title: None,
+                contents: LeafContents::WebView(WebViewPaneSnapshot {
+                    url: url.to_string(),
+                    title: title.to_string(),
+                }),
+            }))),
+            Arc::new(HashMap::new()),
+            None,
+            ctx,
+        );
+        ctx.notify();
+    }
+
     /// Add a tab with a file notebook pane open.
     pub fn add_tab_for_file_notebook(
         &mut self,
@@ -19755,6 +19772,9 @@ impl TypedActionView for Workspace {
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
             AddDockerSandboxTab => self.add_docker_sandbox_tab(ctx),
+            OpenWebView { url, title } => self.add_tab_for_webview(&title, &url, ctx),
+            OpenInbox => self.add_tab_for_webview("Inbox", "file:///Users/chikochingaya/helios-terminal/app/resources/webviews/inbox.html", ctx),
+            OpenCRM => self.add_tab_for_webview("CRM", "file:///Users/chikochingaya/helios-terminal/app/resources/webviews/crm.html", ctx),
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)
             }

@@ -563,6 +563,9 @@ pub const WELCOME_PANE_KIND: &str = "welcome";
 /// The [`pane_leaves::kind`] value for the get-started pane.
 pub const GET_STARTED_PANE_KIND: &str = "get_started";
 
+/// The [`pane_leaves::kind`] value for WebView panes.
+pub const WEBVIEW_PANE_KIND: &str = "webview";
+
 /// The [`pane_leaves::kind`] value for AI document panes.
 pub const AI_DOCUMENT_PANE_KIND: &str = "ai_document";
 
