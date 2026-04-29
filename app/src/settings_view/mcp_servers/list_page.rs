@@ -101,14 +101,68 @@ pub enum MCPServersListPageViewAction {
     ToggleFileBasedMcp,
 }
 
-const HELIOS_SERVER_1: &str = "• GitHub — @modelcontextprotocol/server-github — Connected";
-const HELIOS_SERVER_2: &str = "• Memgraph — mcp-memgraph — bolt://127.0.0.1:7687";
-const HELIOS_SERVER_3: &str = "• Figma — figma-remote — HTTP bearer";
-const HELIOS_SERVER_4: &str = "• Superhuman — superhuman-mail — Email integration";
-const HELIOS_SERVER_5: &str = "• Google Workspace — google-workspace — Calendar, Drive, Docs";
-
-const EMPTY_STATE_TEXT: &str = "Once you add a MCP server, it will be shown here.";
 const NO_SEARCH_RESULTS_TEXT: &str = "No search results found";
+
+/// Represents an MCP server loaded from ~/.pi/agent/mcp.json
+#[derive(Debug, Clone)]
+struct HeliosMCPServer {
+    name: String,
+    status: String,
+}
+
+/// Load MCP servers from ~/.pi/agent/mcp.json
+fn load_helios_mcp_servers() -> Vec<HeliosMCPServer> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let config_path = format!("{}/.pi/agent/mcp.json", home);
+    let mut servers = Vec::new();
+    
+    if let Ok(content) = std::fs::read_to_string(&config_path) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(mcp_servers) = json.get("mcpServers").and_then(|v| v.as_object()) {
+                for (name, config) in mcp_servers {
+                    // Extract status information from the config
+                    let status = if let Some(url) = config.get("url").and_then(|v| v.as_str()) {
+                        // HTTP-based server
+                        if url.contains("figma") {
+                            "HTTP bearer".to_string()
+                        } else {
+                            "HTTP".to_string()
+                        }
+                    } else if let Some(env) = config.get("env").and_then(|v| v.as_object()) {
+                        // Extract useful env info
+                        if let Some(memgraph_url) = env.get("MEMGRAPH_URL").and_then(|v| v.as_str()) {
+                            memgraph_url.to_string()
+                        } else {
+                            "Configured".to_string()
+                        }
+                    } else if let Some(command) = config.get("command").and_then(|v| v.as_str()) {
+                        // Command-based server
+                        if let Some(args) = config.get("args").and_then(|v| v.as_array()) {
+                            if let Some(first_arg) = args.get(0).and_then(|v| v.as_str()) {
+                                format!("{} {}", command, first_arg)
+                            } else {
+                                command.to_string()
+                            }
+                        } else {
+                            command.to_string()
+                        }
+                    } else {
+                        "Configured".to_string()
+                    };
+                    
+                    servers.push(HeliosMCPServer {
+                        name: name.clone(),
+                        status,
+                    });
+                }
+            }
+        }
+    }
+    
+    // Sort by name for consistent display
+    servers.sort_by(|a, b| a.name.cmp(&b.name));
+    servers
+}
 
 pub struct MCPServersListPageView {
     server_cards: HashMap<ServerCardItemId, ViewHandle<ServerCardView>>,
@@ -1500,7 +1554,7 @@ impl MCPServersListPageView {
         column.add_child(
             appearance
                 .ui_builder()
-                .wrappable_text("Helios Pre-configured MCP Servers", false)
+                .wrappable_text("Helios MCP Servers (from ~/.pi/agent/mcp.json)", false)
                 .with_style(UiComponentStyles {
                     foreground: Some(Fill::Solid(
                         blended_colors::text_main(appearance.theme(), appearance.theme().surface_1()),
@@ -1512,49 +1566,58 @@ impl MCPServersListPageView {
                 .finish(),
         );
 
-        column.add_child(
-            appearance
-                .ui_builder()
-                .wrappable_text("The following MCP servers are configured for Helios:", true)
-                .with_style(style::description_text(appearance))
-                .build()
-                .finish(),
-        );
-
-        // Add server list
-        let server_texts = [
-            HELIOS_SERVER_1,
-            HELIOS_SERVER_2,
-            HELIOS_SERVER_3,
-            HELIOS_SERVER_4,
-            HELIOS_SERVER_5,
-        ];
-
-        let mut server_list = Flex::column()
-            .with_spacing(6.);
-
-        for &server_text in &server_texts {
-            server_list.add_child(
+        // Load servers dynamically from mcp.json
+        let helios_servers = load_helios_mcp_servers();
+        
+        if helios_servers.is_empty() {
+            // Fallback if no servers found
+            column.add_child(
                 appearance
                     .ui_builder()
-                    .wrappable_text(server_text, true)
-                    .with_style(UiComponentStyles {
-                        foreground: Some(Fill::Solid(
-                            blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1()),
-                        )),
-                        font_size: Some(12.),
-                        ..Default::default()
-                    })
+                    .wrappable_text("No MCP servers found in ~/.pi/agent/mcp.json", true)
+                    .with_style(style::description_text(appearance))
                     .build()
                     .finish(),
             );
-        }
+        } else {
+            let description = format!("The following {} MCP server(s) are configured for Helios:", helios_servers.len());
+            column.add_child(
+                appearance
+                    .ui_builder()
+                    .wrappable_text(description, true)
+                    .with_style(style::description_text(appearance))
+                    .build()
+                    .finish(),
+            );
 
-        column.add_child(
-            Container::new(server_list.finish())
-                .with_margin_left(8.)
-                .finish(),
-        );
+            // Add server list
+            let mut server_list = Flex::column()
+                .with_spacing(6.);
+
+            for server in helios_servers {
+                let server_text = format!("• {} — {}", server.name, server.status);
+                server_list.add_child(
+                    appearance
+                        .ui_builder()
+                        .wrappable_text(server_text, true)
+                        .with_style(UiComponentStyles {
+                            foreground: Some(Fill::Solid(
+                                blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1()),
+                            )),
+                            font_size: Some(12.),
+                            ..Default::default()
+                        })
+                        .build()
+                        .finish(),
+                );
+            }
+
+            column.add_child(
+                Container::new(server_list.finish())
+                    .with_margin_left(8.)
+                    .finish(),
+            );
+        }
 
         // Add footer text
         column.add_child(
