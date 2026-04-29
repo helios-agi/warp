@@ -11220,11 +11220,6 @@ impl TerminalView {
             }
             ModelEvent::BootstrapPrecmdDone => {
                 self.execute_pending_command((), ctx);
-                // Auto-launch Pi agent in Helios Terminal.
-                // Use direct PTY write for reliability on restored sessions.
-                if !self.input.read(ctx, |input, _| input.has_pending_command()) {
-                    self.write_to_pty(b"pi\n" as &[u8], ctx);
-                }
             }
             ModelEvent::AgentTaggedInChanged { is_tagged_in } => {
                 let state = if *is_tagged_in {
@@ -11983,6 +11978,18 @@ impl TerminalView {
         }
 
         self.refresh_warp_prompt(ctx);
+        
+        // Helios: auto-launch Pi agent after session bootstrap.
+        // Use a short delay to ensure the shell prompt is ready for input.
+        let _ = ctx.spawn(
+            async move {
+                warpui::r#async::Timer::after(std::time::Duration::from_millis(500)).await;
+            },
+            |this, _, ctx| {
+                this.write_to_pty(b"pi\n" as &[u8], ctx);
+            },
+        );
+        
         ctx.emit(Event::SessionBootstrapped);
     }
 
