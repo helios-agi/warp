@@ -1181,16 +1181,65 @@ impl CodePageWidget {
             PersistedWorkspace::as_ref(app).workspaces().collect();
 
         if workspaces.is_empty() {
+            let detected = detect_project_folders();
+
+            // Informational description
             content.add_child(
                 Container::new(
                     appearance
                         .ui_builder()
-                        .paragraph("No folders have been initialized yet.")
+                        .paragraph(
+                            "Helios indexes codebases via Memgraph for semantic search and agent context. \
+                            Use the \u{2018}Index new folder\u{2019} button or run \
+                            \u{2018}helios index <path>\u{2019} from the terminal.",
+                        )
                         .build()
                         .finish(),
                 )
-                .with_margin_bottom(MAIN_SECTION_MARGIN)
+                .with_margin_bottom(8.0)
                 .finish(),
+            );
+
+            if !detected.is_empty() {
+                content.add_child(
+                    Container::new(
+                        ui_builder
+                            .span("Detected projects:")
+                            .with_style(UiComponentStyles {
+                                font_weight: Some(Weight::Semibold),
+                                font_color: Some(theme.active_ui_text_color().into()),
+                                ..Default::default()
+                            })
+                            .build()
+                            .finish(),
+                    )
+                    .with_margin_top(8.0)
+                    .with_margin_bottom(6.0)
+                    .finish(),
+                );
+
+                for project_path in detected {
+                    content.add_child(
+                        Container::new(
+                            appearance
+                                .ui_builder()
+                                .paragraph(format!(
+                                    "  •  {} — available to index",
+                                    project_path
+                                ))
+                                .build()
+                                .finish(),
+                        )
+                        .with_margin_bottom(4.0)
+                        .finish(),
+                    );
+                }
+            }
+
+            content.add_child(
+                Container::new(Empty::new().finish())
+                    .with_margin_bottom(MAIN_SECTION_MARGIN)
+                    .finish(),
             );
             return content.finish();
         }
@@ -2459,4 +2508,22 @@ impl SettingsWidget for GlobalSearchToggleWidget {
             Some("Adds global file search to the left side tools panel.".into()),
         )
     }
+}
+
+/// Detects git repositories in the user's home directory top-level folders.
+/// Returns a sorted list of absolute paths to detected git repositories,
+/// shown as "available to index" suggestions when no workspaces are initialized.
+fn detect_project_folders() -> Vec<String> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let mut projects = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&home) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && path.join(".git").exists() {
+                projects.push(path.display().to_string());
+            }
+        }
+    }
+    projects.sort();
+    projects
 }
