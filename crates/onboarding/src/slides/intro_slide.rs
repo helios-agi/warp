@@ -147,7 +147,7 @@ impl IntroSlide {
         let base_color: ColorU = internal_colors::fg_overlay_4(theme).into();
         let shimmer_color: ColorU = theme.foreground().into();
         let title = ShimmeringTextElement::new(
-            "Welcome to Warp",
+            "Welcome to Helios",
             appearance.ui_font_family(),
             32.,
             base_color,
@@ -159,7 +159,7 @@ impl IntroSlide {
 
         let subtitle_color = internal_colors::text_sub(theme, theme.background().into_solid());
         let subtitle = FormattedTextElement::from_str(
-            "A modern terminal with state of the art agents built in.",
+            "An agentic terminal powered by helios-agi.",
             appearance.ui_font_family(),
             16.,
         )

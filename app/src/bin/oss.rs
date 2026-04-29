@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     let mut state = ChannelState::new(
         Channel::Oss,
         ChannelConfig {
-            app_id: AppId::new("dev", "warp", "WarpOss"),
+            app_id: AppId::new("dev", "helios", "terminal"),
             logfile_name: "warp-oss.log".into(),
             server_config: WarpServerConfig::production(),
             oz_config: OzConfig::production(),
