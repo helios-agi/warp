@@ -258,6 +258,34 @@ pub(super) fn adeberry_colors() -> TerminalColors {
     TerminalColors::new(ADEBERRY_NORMAL_COLORS, ADEBERRY_BRIGHT_COLORS)
 }
 
+/// Helios Dark — deep navy #020914, cyan #22D3EE accent
+pub fn helios_dark_theme() -> WarpTheme {
+    WarpTheme::new(
+        Fill::Solid(ColorU::from_u32(0x020914FF)), // deep navy background
+        ColorU::from_u32(0xE0E8F0FF),              // light foreground
+        Fill::Solid(ColorU::from_u32(0x22D3EEFF)), // cyan accent
+        None,
+        Some(Details::Darker),
+        dark_mode_colors(),
+        None,
+        Some("Helios Dark".to_string()),
+    )
+}
+
+/// Helios Light — off-white #EEF2F7, teal #0891B2 accent
+pub fn helios_light_theme() -> WarpTheme {
+    WarpTheme::new(
+        Fill::Solid(ColorU::from_u32(0xEEF2F7FF)), // light background
+        ColorU::new(26, 36, 51, 255),                // #1A2433 dark foreground
+        Fill::Solid(ColorU::from_u32(0x0891B2FF)),  // teal accent
+        None,
+        Some(Details::Lighter),
+        light_mode_colors(),
+        None,
+        Some("Helios Light".to_string()),
+    )
+}
+
 /// Default bundled themes
 pub fn dark_theme() -> WarpTheme {
     WarpTheme::new(
@@ -581,7 +609,7 @@ pub(super) fn sent_referral_reward() -> WarpTheme {
             source: bundled_or_fetched_asset!("jpg/sent_referral_reward_bg.jpg"),
             opacity: 100,
         }),
-        Some("Warp Referral".to_string()),
+        Some("Helios Referral".to_string()),
     )
 }
 
