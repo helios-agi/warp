@@ -4,15 +4,15 @@ Version=1.0
 
 Type=Application
 
-Name=WarpOss
+Name=Helios Terminal
 GenericName=TerminalEmulator
 
-Exec=warp-oss %U
-StartupWMClass=dev.warp.WarpOss
+Exec=helios-terminal %U
+StartupWMClass=dev.helios.terminal
 
 Keywords=shell;prompt;command;commandline;cmd;
 
-Icon=dev.warp.WarpOss
+Icon=dev.helios.terminal
 
 Categories=System;TerminalEmulator;
 
