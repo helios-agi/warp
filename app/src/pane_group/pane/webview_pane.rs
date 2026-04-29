@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use warpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::app_state::{LeafContents, WebViewPaneSnapshot};
@@ -13,6 +15,8 @@ pub struct WebViewPane {
     pane_configuration: ModelHandle<PaneConfiguration>,
     url: String,
     title: String,
+    #[cfg(target_os = "macos")]
+    native_webview: RefCell<Option<warpui::platform::mac::webview::HeliosWebView>>,
 }
 
 impl WebViewPane {
@@ -34,6 +38,8 @@ impl WebViewPane {
             pane_configuration,
             url,
             title,
+            #[cfg(target_os = "macos")]
+            native_webview: RefCell::new(None),
         }
     }
 }
@@ -56,6 +62,28 @@ impl PaneContent for WebViewPane {
         ctx.subscribe_to_view(&child, move |pane_group, _, event, ctx| {
             pane_group.handle_pane_event(pane_id, event, ctx);
         });
+
+        // Create native WKWebView and add to window content view
+        #[cfg(target_os = "macos")]
+        {
+            use cocoa::foundation::{NSPoint, NSRect, NSSize};
+            use warpui::platform::mac::webview::HeliosWebView;
+            use warpui::platform::mac::content_view_from_platform_window;
+
+            let window_id = ctx.window_id();
+            if let Some(platform_window) = ctx.windows().platform_window(window_id) {
+                if let Some(content_view) = content_view_from_platform_window(platform_window.as_ref()) {
+                    // Start with a reasonable default frame — will be updated on layout
+                    let frame = NSRect::new(
+                        NSPoint::new(0.0, 0.0),
+                        NSSize::new(800.0, 600.0),
+                    );
+                    let webview = HeliosWebView::new(frame, Some(&self.url));
+                    webview.add_to_view(content_view);
+                    *self.native_webview.borrow_mut() = Some(webview);
+                }
+            }
+        }
     }
 
     fn detach(
@@ -66,6 +94,12 @@ impl PaneContent for WebViewPane {
     ) {
         let child = self.view.as_ref(ctx).child(ctx);
         ctx.unsubscribe_to_view(&child);
+
+        // Remove native webview (Drop calls helios_webview_release)
+        #[cfg(target_os = "macos")]
+        {
+            *self.native_webview.borrow_mut() = None;
+        }
     }
 
     fn snapshot(&self, _ctx: &AppContext) -> LeafContents {

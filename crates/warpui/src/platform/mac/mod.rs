@@ -21,6 +21,7 @@ pub use fonts::FontDB;
 pub use rendering::is_low_power_gpu_available;
 pub use window::Window;
 pub use window::WindowExt;
+pub use window::content_view_from_platform_window;
 
 use clipboard::*;
 

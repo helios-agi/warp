@@ -1044,7 +1044,7 @@ impl WindowState {
     }
 
     /// Returns an `id` to the current `NSView` of the window.
-    pub(super) fn native_view(&self) -> id {
+    pub fn native_view(&self) -> id {
         unsafe { msg_send![self.native_window, contentView] }
     }
 
@@ -1668,4 +1668,14 @@ fn transform_origin_from_rect_coord_to_frame_coord(origin: Vector2F, size: Vecto
 unsafe fn to_string(value: *mut Object) -> String {
     let slice = slice::from_raw_parts(value.UTF8String() as *const c_uchar, value.len());
     str::from_utf8_unchecked(slice).to_string()
+}
+
+/// Extracts the native content view (`NSView`) from a trait-object platform window.
+///
+/// Returns `Some(id)` when `window` is the macOS concrete `Window` type, `None` otherwise.
+pub fn content_view_from_platform_window(window: &dyn crate::platform::Window) -> Option<id> {
+    window
+        .as_any()
+        .downcast_ref::<Window>()
+        .map(|w| w.0.native_view())
 }
