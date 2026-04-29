@@ -156,11 +156,7 @@ impl AgentOnboardingView {
             ctx.add_typed_action_view(move |_| IntroSlide::new(onboarding_state))
         };
 
-        ctx.subscribe_to_view(&intro_slide, |_me, _view, event, ctx| match event {
-            IntroSlideEvent::LoginRequested => {
-                ctx.emit(AgentOnboardingEvent::LoginFromWelcomeRequested);
-            }
-        });
+        // Login link removed — intro slide emits no events.
 
         let theme_picker_slide = {
             let themes = theme_picker_themes.clone();

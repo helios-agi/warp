@@ -25,14 +25,14 @@ use warpui::{
 };
 
 const SUBSCRIBE_ITEMS: &[&str] = &[
-    "1,500 credits per month",
-    "Access to frontier OpenAI, Anthropic, and Google models",
-    "Access to Reload credits and volume-based discounts",
-    "Extended cloud agents access",
-    "Highest codebase indexing limits",
-    "Unlimited Helios Drive objects and collaboration",
-    "Private email support",
-    "Unlimited cloud conversation storage",
+    "Bring your own API key (Anthropic, OpenAI, Google, and more)",
+    "Access to frontier models via your own provider keys",
+    "Full multi-agent orchestration (scout, planner, worker, reviewer)",
+    "Skills and extensions ecosystem",
+    "Codebase indexing and context",
+    "CLI agent support (Claude Code, Codex, Gemini, and more)",
+    "Agents over SSH",
+    "Cloud session sharing",
 ];
 
 #[derive(Debug, Clone)]
@@ -121,8 +121,8 @@ impl FreeUserNoAiSlide {
             appearance,
             0,
             Icon::Code2,
-            "Agent driven development with Helios's built-in agent",
-            "Iterate, plan, and build with Oz: Helios's built-in agent. Available locally or in the cloud.",
+            "Agent driven development with Helios AI",
+            "Iterate, plan, and build with Helios: a multi-agent system powered by Pi. Bring your own API keys for Anthropic, OpenAI, and more.",
             agent_price_badge.to_string(),
             true, // badge is green
             self.agent_mouse_state.clone(),
@@ -331,7 +331,7 @@ impl FreeUserNoAiSlide {
             self.subscribe_nav_button.render(
                 appearance,
                 button::Params {
-                    content: button::Content::Label("Subscribe".into()),
+                    content: button::Content::Label("Set up API keys".into()),
                     theme: &button::themes::Primary,
                     options: button::Options {
                         on_click: Some(Box::new(|ctx, _app, _pos| {
@@ -368,7 +368,7 @@ impl FreeUserNoAiSlide {
         let text_sub = internal_colors::text_sub(theme, internal_colors::neutral_2(theme));
 
         let title = FormattedTextElement::from_str(
-            "Subscribe to access agent driven development in Helios.",
+            "Set up your API keys to enable AI features in Helios.",
             ui_font_family,
             24.,
         )
@@ -416,7 +416,7 @@ impl FreeUserNoAiSlide {
                     .with_cross_axis_alignment(CrossAxisAlignment::Center)
                     .with_child(
                         warpui::elements::Text::new_inline(
-                            "Subscribe",
+                            "Set up API keys",
                             appearance.ui_font_family(),
                             14.,
                         )
