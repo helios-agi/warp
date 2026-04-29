@@ -3923,9 +3923,31 @@ impl AgentsWidget {
         .with_margin_bottom(4.0)
         .finish();
 
+        let display_agents: Vec<(String, String, String)> = {
+            let loaded = load_agent_definitions();
+            if loaded.is_empty() {
+                vec![
+                    ("Arline (scout)".into(), "Reconnaissance".into(), "Codebase mapping, pattern matching, anomaly detection".into()),
+                    ("Wheeler (planner)".into(), "Planning".into(), "Task decomposition, estimation, interview".into()),
+                    ("Dyson (worker)".into(), "Implementation".into(), "TDD, git commit, debugging".into()),
+                    ("Murray (reviewer)".into(), "Review".into(), "Adversarial review, security scan".into()),
+                    ("Hans (verifier)".into(), "Verification".into(), "Invariant check, data flow trace".into()),
+                    ("Dirac (auditor)".into(), "Audit".into(), "Claim verification, ground truth".into()),
+                    ("Tukey (researcher)".into(), "Research".into(), "Web search, source evaluation".into()),
+                ]
+            } else {
+                loaded
+            }
+        };
+
+        let desc_text = format!(
+            "{} agents loaded from ~/.pi/agent/agents/",
+            display_agents.len()
+        );
+
         let description = Container::new(
             render_ai_setting_description(
-                "The Feynman agents that power Helios orchestration. Each agent specializes in a distinct phase of the development workflow.",
+                desc_text,
                 is_any_ai_enabled,
                 app,
             )
@@ -3933,21 +3955,11 @@ impl AgentsWidget {
         .with_margin_bottom(8.)
         .finish();
 
-        let agents: [(&str, &str, &str); 7] = [
-            ("Arline (scout)", "Reconnaissance", "Codebase mapping, pattern matching, anomaly detection"),
-            ("Wheeler (planner)", "Planning", "Task decomposition, estimation, interview"),
-            ("Dyson (worker)", "Implementation", "TDD, git commit, debugging"),
-            ("Murray (reviewer)", "Review", "Adversarial review, security scan"),
-            ("Hans (verifier)", "Verification", "Invariant check, data flow trace"),
-            ("Dirac (auditor)", "Audit", "Claim verification, ground truth"),
-            ("Tukey (researcher)", "Research", "Web search, source evaluation"),
-        ];
-
         let mut column = Flex::column()
             .with_child(header)
             .with_child(description);
 
-        for (name, role, desc) in agents {
+        for (name, role, desc) in display_agents {
             let name_label = Text::new_inline(name, font_family, CONTENT_FONT_SIZE)
                 .with_style(Properties::default().weight(Weight::Bold))
                 .with_color(font_color.into())
@@ -6797,6 +6809,70 @@ impl SettingsWidget for AwsBedrockWidget {
             .with_margin_bottom(HEADER_PADDING)
             .finish()
     }
+}
+
+fn extract_yaml_frontmatter(content: &str) -> Option<String> {
+    let trimmed = content.trim();
+    if trimmed.starts_with("---") {
+        if let Some(end_idx) = trimmed[3..].find("\n---") {
+            return Some(trimmed[3..3 + end_idx].to_string());
+        }
+    }
+    None
+}
+
+fn extract_yaml_value(yaml: &str, key: &str) -> Option<String> {
+    for line in yaml.lines() {
+        let line = line.trim();
+        if line.starts_with(&format!("{}:", key)) {
+            let value = line[key.len() + 1..].trim();
+            let value = value.trim_matches('"').trim_matches('\'');
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn load_agent_definitions() -> Vec<(String, String, String)> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let agents_dir = format!("{}/.pi/agent/agents", home);
+    let mut agents = Vec::new();
+
+    let Ok(entries) = std::fs::read_dir(&agents_dir) else {
+        return agents;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        // Only .md files, skip .chain.md files
+        let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        if !filename.ends_with(".md") || filename.contains(".chain.") {
+            continue;
+        }
+
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+
+        if let Some(frontmatter) = extract_yaml_frontmatter(&content) {
+            let name = extract_yaml_value(&frontmatter, "name")
+                .unwrap_or_else(|| {
+                    path.file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string()
+                });
+            let description = extract_yaml_value(&frontmatter, "description")
+                .unwrap_or_else(|| "No description".to_string());
+            let skills = extract_yaml_value(&frontmatter, "skills")
+                .unwrap_or_default();
+            agents.push((name, description, skills));
+        }
+    }
+    agents.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    agents
 }
 
 mod styles {
