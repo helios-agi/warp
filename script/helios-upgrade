@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# helios-terminal-upgrade — Build & install Helios Terminal for Apple Silicon
+# helios-upgrade — Build & install Helios Terminal for Apple Silicon
 # =============================================================================
 # Usage:
 #   helios upgrade            (from helios CLI)
 #   ./script/helios-upgrade   (from repo root)
 #
-# Prerequisites: Rust toolchain, Xcode Command Line Tools
+# Prerequisites: Rust toolchain, Xcode Command Line Tools, cargo-bundle
 # =============================================================================
 set -euo pipefail
 
@@ -22,7 +22,6 @@ APP_NAME="Helios Terminal"
 BUNDLE_ID="dev.helios.terminal"
 APP_DEST="/Applications/${APP_NAME}.app"
 ICON_SRC="$HOME/familiar/apps/helios-desktop/src/assets/images/helios/helios.icns"
-SUPPORT_DIR="$HOME/Library/Application Support/${BUNDLE_ID}"
 
 log()  { echo -e "${GREEN}▸${RESET} $*"; }
 warn() { echo -e "${YELLOW}▸${RESET} $*"; }
@@ -55,12 +54,17 @@ if [[ "$CURRENT_BRANCH" != "master" ]]; then
 fi
 git pull origin master -q
 COMMIT=$(git rev-parse --short HEAD)
-log "At commit ${COMMIT}"
+log "Building from commit ${COMMIT}"
+log "Verify at: https://github.com/helios-agi/warp/commit/${COMMIT}"
 
 # ─── Step 2: Verify toolchain ────────────────────────────────────────────────
 step 2 "Verify build environment"
 if ! command -v cargo &>/dev/null; then
   err "Rust not installed. Run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+  exit 1
+fi
+if ! cargo bundle --help &>/dev/null; then
+  err "cargo-bundle not installed. Run: cargo install cargo-bundle"
   exit 1
 fi
 if ! command -v xcode-select &>/dev/null; then
@@ -75,7 +79,7 @@ step 3 "Build helios-terminal (release)"
 BUILD_START=$(date +%s)
 
 # Use release for distribution, debug for dev
-BUILD_PROFILE="${HELIOS_BUILD_PROFILE:-debug}"
+BUILD_PROFILE="${HELIOS_BUILD_PROFILE:-release}"
 if [[ "$BUILD_PROFILE" == "release" ]]; then
   CARGO_FLAGS="--release"
   TARGET_DIR="target/release"
@@ -85,12 +89,12 @@ else
 fi
 
 cd app
-cargo bundle --bin helios-terminal $CARGO_FLAGS 2>&1 | tail -5
+cargo bundle --bin helios-terminal ${CARGO_FLAGS:-} 2>&1 | tail -5
 cd ..
 
 BUILD_END=$(date +%s)
 BUILD_TIME=$((BUILD_END - BUILD_START))
-BUNDLE_PATH="${TARGET_DIR}/bundle/osx/helios-terminal.app"
+BUNDLE_PATH="app/${TARGET_DIR}/bundle/osx/helios-terminal.app"
 
 if [[ ! -d "$BUNDLE_PATH" ]]; then
   err "Build failed — bundle not found at $BUNDLE_PATH"
@@ -131,9 +135,6 @@ if pgrep -f "helios-terminal" &>/dev/null; then
   pkill -f "helios-terminal" 2>/dev/null || true
   sleep 2
 fi
-
-# Clear stale app state (optional — uncomment to reset on every upgrade)
-# rm -f "${SUPPORT_DIR}/warp.sqlite"*
 
 # Install
 rm -rf "$APP_DEST"
