@@ -161,7 +161,9 @@ impl LeafContents {
             LeafContents::NetworkLog
             // Environment management panes are opened on-demand via workspace
             // actions and have no persistable state.
-            | LeafContents::EnvironmentManagement(_) => false,
+            | LeafContents::EnvironmentManagement(_)
+            // WebView panes are not persisted until schema migration is added.
+            | LeafContents::WebView(_) => false,
             LeafContents::Terminal(_)
             | LeafContents::Notebook(_)
             | LeafContents::AIDocument(_)
@@ -174,8 +176,7 @@ impl LeafContents {
             | LeafContents::CodeReview(_)
             | LeafContents::AmbientAgent(_)
             | LeafContents::Welcome { .. }
-            | LeafContents::GetStarted
-            | LeafContents::WebView(_) => true,
+            | LeafContents::GetStarted => true,
         }
     }
 }

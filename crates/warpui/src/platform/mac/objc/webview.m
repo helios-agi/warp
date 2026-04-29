@@ -48,12 +48,26 @@ id helios_webview_create(NSRect frame, const char* initial_url) {
         NSString* urlStr = [NSString stringWithUTF8String:initial_url];
         if ([urlStr hasPrefix:@"file://"]) {
             NSURL* url = [NSURL URLWithString:urlStr];
-            NSURL* dir = [url URLByDeletingLastPathComponent];
-            [webview loadFileURL:url allowingReadAccessToDirectory:dir];
+            if (!url) {
+                // Try percent-encoding for malformed URLs
+                NSString* encoded = [urlStr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+                url = [NSURL URLWithString:encoded];
+            }
+            if (url) {
+                NSURL* dir = [url URLByDeletingLastPathComponent];
+                [webview loadFileURL:url allowingReadAccessToDirectory:dir];
+            }
         } else {
             NSURL* url = [NSURL URLWithString:urlStr];
-            NSURLRequest* req = [NSURLRequest requestWithURL:url];
-            [webview loadRequest:req];
+            if (!url) {
+                // Try percent-encoding for malformed URLs
+                NSString* encoded = [urlStr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+                url = [NSURL URLWithString:encoded];
+            }
+            if (url) {
+                NSURLRequest* req = [NSURLRequest requestWithURL:url];
+                [webview loadRequest:req];
+            }
         }
     }
 
@@ -63,6 +77,13 @@ id helios_webview_create(NSRect frame, const char* initial_url) {
 void helios_webview_load_url(id webview, const char* url) {
     NSString* urlStr = [NSString stringWithUTF8String:url];
     NSURL* nsurl = [NSURL URLWithString:urlStr];
+    if (!nsurl) {
+        // Try percent-encoding for malformed URLs
+        NSString* encoded = [urlStr stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+        nsurl = [NSURL URLWithString:encoded];
+    }
+    if (!nsurl) return; // Invalid URL, skip
+    
     if ([urlStr hasPrefix:@"file://"]) {
         NSURL* dir = [nsurl URLByDeletingLastPathComponent];
         [(WKWebView*)webview loadFileURL:nsurl allowingReadAccessToDirectory:dir];
@@ -96,4 +117,15 @@ void helios_webview_eval_js(id webview, const char* js) {
 
 void helios_webview_set_ipc_callback(helios_webview_ipc_callback callback) {
     _ipc_callback = callback;
+}
+
+void helios_webview_release(id webview) {
+    WKWebView* wv = (WKWebView*)webview;
+    // Remove message handler to break retain cycle
+    [wv.configuration.userContentController removeScriptMessageHandlerForName:@"helios"];
+    [wv removeFromSuperview];
+    // Under MRC, this balances the +1 from alloc/init
+    #if !__has_feature(objc_arc)
+    [wv release];
+    #endif
 }

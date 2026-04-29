@@ -13,6 +13,7 @@ extern "C" {
     fn helios_webview_remove(webview: id);
     fn helios_webview_eval_js(webview: id, js: *const c_char);
     fn helios_webview_set_ipc_callback(callback: extern "C" fn(*const c_char));
+    fn helios_webview_release(webview: id);
 }
 
 /// Safe wrapper around WKWebView
@@ -22,19 +23,19 @@ pub struct HeliosWebView {
 
 impl HeliosWebView {
     pub fn new(frame: NSRect, url: Option<&str>) -> Self {
-        let c_url = url.map(|u| CString::new(u).unwrap());
+        let c_url = url.and_then(|u| CString::new(u).ok());
         let ptr = c_url.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null());
         let native = unsafe { helios_webview_create(frame, ptr) };
         Self { native }
     }
 
     pub fn load_url(&self, url: &str) {
-        let c_url = CString::new(url).unwrap();
+        let Ok(c_url) = CString::new(url) else { return }; // URL contains NUL byte, skip
         unsafe { helios_webview_load_url(self.native, c_url.as_ptr()) };
     }
 
     pub fn load_html(&self, html: &str) {
-        let c_html = CString::new(html).unwrap();
+        let Ok(c_html) = CString::new(html) else { return }; // HTML contains NUL byte, skip
         unsafe { helios_webview_load_html(self.native, c_html.as_ptr()) };
     }
 
@@ -51,7 +52,7 @@ impl HeliosWebView {
     }
 
     pub fn eval_js(&self, js: &str) {
-        let c_js = CString::new(js).unwrap();
+        let Ok(c_js) = CString::new(js) else { return }; // JS contains NUL byte, skip
         unsafe { helios_webview_eval_js(self.native, c_js.as_ptr()) };
     }
 
@@ -62,7 +63,7 @@ impl HeliosWebView {
 
 impl Drop for HeliosWebView {
     fn drop(&mut self) {
-        self.remove();
+        unsafe { helios_webview_release(self.native) };
     }
 }
 

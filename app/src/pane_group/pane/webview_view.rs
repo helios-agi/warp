@@ -77,7 +77,7 @@ impl BackingView for WebViewView {
         _action: &Self::PaneHeaderOverflowMenuAction,
         _ctx: &mut ViewContext<Self>,
     ) {
-        unimplemented!()
+        // No overflow menu actions for WebView panes
     }
 
     fn close(&mut self, ctx: &mut ViewContext<Self>) {

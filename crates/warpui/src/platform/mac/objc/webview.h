@@ -25,3 +25,6 @@ void helios_webview_eval_js(id webview, const char* js);
 // Set the IPC callback (Rust function pointer)
 typedef void (*helios_webview_ipc_callback)(const char* message);
 void helios_webview_set_ipc_callback(helios_webview_ipc_callback callback);
+
+// Release webview and break retain cycles
+void helios_webview_release(id webview);
