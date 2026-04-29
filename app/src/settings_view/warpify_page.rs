@@ -57,7 +57,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
 
     if FeatureFlag::SSHTmuxWrapper.is_enabled() {
         toggle_binding_pairs.push(ToggleSettingActionPair::new(
-            "SSH session detection for Warpification",
+            "SSH session detection for Helios",
             builder(SettingsAction::WarpifyPageToggle(
                 WarpifyPageAction::ToggleTmuxWarpification,
             )),
@@ -75,10 +75,10 @@ const ITEM_VERTICAL_SPACING: f32 = 24.;
 const BUILT_IN_TEXT_INPUT_MARGIN: f32 = 10.;
 const SPACE_AFTER_TEXT_INPUT: f32 = ITEM_VERTICAL_SPACING - BUILT_IN_TEXT_INPUT_MARGIN;
 
-const SSH_TMUX_WARPIFICATION_DESCRIPTION: &str = "The tmux ssh wrapper works in many situations where the default one does not, but may require you to hit a button to warpify. Takes effect in new tabs.";
+const SSH_TMUX_WARPIFICATION_DESCRIPTION: &str = "The tmux ssh wrapper works in many situations where the default one does not, but may require you to hit a button to enable Helios features. Takes effect in new tabs.";
 
 const SSH_EXTENSION_INSTALL_MODE_DESCRIPTION: &str =
-    "Controls the installation behavior for Warp's SSH extension when a remote host doesn't have it installed.";
+    "Controls the installation behavior for Helios's SSH extension when a remote host doesn't have it installed.";
 
 /// This page lets users configure when they get asked to warpify a session. Some shell commands
 /// are recognized by default. Users can add new shell commands, or prevent the default ones from
@@ -185,7 +185,7 @@ impl WarpifyPageView {
         {
             categories.push(
                 Category::new("SSH", vec![Box::new(SSHWidget::default())])
-                    .with_subtitle("Warpify your interactive SSH sessions."),
+                    .with_subtitle("Enable Helios in your interactive SSH sessions."),
             );
         }
         PageType::new_categorized(categories, None)
@@ -537,7 +537,7 @@ impl TitleWidget {
             ),
             FormattedTextFragment::hyperlink(
                 "Learn more",
-                "https://docs.warp.dev/terminal/warpify/subshells",
+                "https://docs.helios-terminal.dev/terminal/features/subshells",
             ),
         ];
 
@@ -556,7 +556,7 @@ impl TitleWidget {
         .finish();
 
         Flex::column()
-            .with_child(render_page_title("Warpify", HEADER_FONT_SIZE, appearance))
+            .with_child(render_page_title("Helios Features", HEADER_FONT_SIZE, appearance))
             .with_child(warpify_description)
             .finish()
     }
@@ -682,7 +682,7 @@ impl SettingsWidget for SSHWidget {
             &WarpifySettings::as_ref(app).enable_ssh_warpification,
             move || {
                 render_body_item::<WarpifyPageAction>(
-                    "Warpify SSH Sessions".into(),
+                    "Helios SSH Sessions".into(),
                     None,
                     LocalOnlyIconState::for_setting(
                         EnableSshWarpification::storage_key(),
@@ -742,11 +742,11 @@ impl SettingsWidget for SSHWidget {
                 let mut column = Flex::column();
 
                 column.add_child(render_body_item::<WarpifyPageAction>(
-                    "Use Tmux Warpification".into(),
+                    "Use Tmux Helios Integration".into(),
                     Some(AdditionalInfo {
                         mouse_state: self.additional_info_mouse_state.clone(),
                         on_click_action: Some(WarpifyPageAction::OpenUrl(
-                            "https://docs.warp.dev/terminal/warpify/ssh".into(),
+                            "https://docs.helios-terminal.dev/terminal/features/ssh".into(),
                         )),
                         secondary_text: None,
                         tooltip_override_text: None,

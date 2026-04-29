@@ -54,7 +54,7 @@ impl SettingsWidget for AboutPageWidget {
     type View = AboutPageView;
 
     fn search_terms(&self) -> &str {
-        "about warp version"
+        "about helios version"
     }
 
     fn render(
@@ -67,9 +67,9 @@ impl SettingsWidget for AboutPageWidget {
         let ui_builder = appearance.ui_builder();
 
         let image_path = if theme.inferred_color_scheme() == ColorScheme::LightOnDark {
-            "bundled/svg/warp-logo-with-light-title.svg"
+            "bundled/svg/helios-logo-with-light-title.svg"
         } else {
-            "bundled/svg/warp-logo-with-dark-title.svg"
+            "bundled/svg/helios-logo-with-dark-title.svg"
         };
 
         let version = ChannelState::app_version().unwrap_or("v#.##.###");
@@ -118,7 +118,7 @@ impl SettingsWidget for AboutPageWidget {
                 .with_child(version_row.finish())
                 .with_child(
                     ui_builder
-                        .span("Copyright 2026 Warp")
+                        .span("Copyright 2026 Helios")
                         .build()
                         .with_margin_top(16.)
                         .finish(),
