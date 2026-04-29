@@ -19810,6 +19810,10 @@ impl TypedActionView for Workspace {
                 let url = Self::webview_resource_url("crm.html");
                 self.add_tab_for_webview("CRM", &url, ctx);
             }
+            OpenInterview => {
+                let url = Self::webview_resource_url("interview.html");
+                self.add_tab_for_webview("Interview", &url, ctx);
+            }
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)
             }

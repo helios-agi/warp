@@ -152,3 +152,8 @@ void helios_webview_release(id webview) {
     [wv release];
     #endif
 }
+
+void helios_webview_set_autoresize(id webview) {
+    WKWebView* wv = (WKWebView*)webview;
+    wv.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+}

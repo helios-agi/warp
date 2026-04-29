@@ -29,3 +29,6 @@ void helios_webview_eval_js(id webview, const char* js);
 
 // Release webview and break retain cycles
 void helios_webview_release(id webview);
+
+// Set autoresizing mask so WKWebView fills its parent on resize
+void helios_webview_set_autoresize(id webview);

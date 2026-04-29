@@ -18,6 +18,7 @@ extern "C" {
     fn helios_webview_remove(webview: id);
     fn helios_webview_eval_js(webview: id, js: *const c_char);
     fn helios_webview_release(webview: id);
+    fn helios_webview_set_autoresize(webview: id);
 }
 
 /// Safe wrapper around WKWebView
@@ -67,6 +68,10 @@ impl HeliosWebView {
 
     pub fn native_id(&self) -> id {
         self.native
+    }
+
+    pub fn set_autoresize(&self) {
+        unsafe { helios_webview_set_autoresize(self.native) };
     }
 }
 
