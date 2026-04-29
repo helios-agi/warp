@@ -26,6 +26,8 @@ pub(super) mod notebook_pane;
 pub(super) mod settings_pane;
 pub(super) mod terminal_pane;
 pub mod view;
+pub(super) mod webview_pane;
+pub(super) mod webview_view;
 pub(super) mod welcome_pane;
 pub(crate) mod welcome_view;
 pub mod workflow_pane;
@@ -151,6 +153,7 @@ pub(crate) enum IPaneType {
     GetStarted,
     NetworkLog,
     Welcome,
+    WebView,
     DeferredPlaceholder,
     /// A pane type only for tests.
     #[cfg(test)]
@@ -175,6 +178,7 @@ impl Display for IPaneType {
             IPaneType::GetStarted => write!(f, "GetStarted"),
             IPaneType::NetworkLog => write!(f, "Network Log"),
             IPaneType::Welcome => write!(f, "Welcome"),
+            IPaneType::WebView => write!(f, "WebView"),
             IPaneType::DeferredPlaceholder => write!(f, "Placeholder"),
             #[cfg(test)]
             IPaneType::Dummy => write!(f, "Dummy"),
@@ -274,6 +278,16 @@ impl PaneId {
     /// Creates a [`PaneId`] from a [`ViewContext<PaneView<NetworkLogView>>`].
     pub fn from_network_log_pane_ctx(ctx: &ViewContext<PaneView<NetworkLogView>>) -> Self {
         Self::new_from_ctx(IPaneType::NetworkLog, ctx)
+    }
+
+    /// Creates a [`PaneId`] from a [`ViewContext<PaneView<WebViewView>>`].
+    pub fn from_webview_pane_ctx(ctx: &ViewContext<PaneView<webview_view::WebViewView>>) -> Self {
+        Self::new_from_ctx(IPaneType::WebView, ctx)
+    }
+
+    /// Creates a [`PaneId`] from a [`PaneView<WebViewView>`] entity ID.
+    pub fn from_webview_pane_view(view: &ViewHandle<PaneView<webview_view::WebViewView>>) -> Self {
+        Self::new(IPaneType::WebView, view)
     }
 
     /// Creates a [`PaneId`] from a [`PaneView<TerminalView>`] entity ID.
@@ -494,6 +508,9 @@ impl PaneId {
             }
             IPaneType::Welcome => {
                 ChildView::<PaneView<WelcomeView>>::with_id(self.0.pane_view_id).finish()
+            }
+            IPaneType::WebView => {
+                ChildView::<PaneView<webview_view::WebViewView>>::with_id(self.0.pane_view_id).finish()
             }
             IPaneType::DeferredPlaceholder => warpui::elements::Empty::new().finish(),
             #[cfg(test)]

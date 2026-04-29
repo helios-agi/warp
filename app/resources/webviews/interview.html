@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helios Interview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        .question-card {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Helios Interview</h1>
+            <p class="text-gray-400">Answer the questions to help Helios understand your needs</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div id="progress-container" class="mb-8 hidden">
+            <div class="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Progress</span>
+                <span><span id="current-question">0</span> of <span id="total-questions">0</span></span>
+            </div>
+            <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                <div id="progress-bar" class="progress-bar bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Interview Form Container -->
+        <div id="form-container" class="space-y-6">
+            <!-- Questions will be dynamically inserted here -->
+        </div>
+
+        <!-- Waiting State -->
+        <div id="waiting-state" class="text-center py-16">
+            <div class="mb-6">
+                <div class="inline-block w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h2 class="text-xl font-semibold mb-2">Waiting for interview data...</h2>
+            <p class="text-gray-400 mb-6">Helios will send questions when ready</p>
+            <button id="test-interview-btn" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                Load Test Interview
+            </button>
+        </div>
+
+        <!-- Submit Button -->
+        <div id="submit-container" class="mt-8 hidden">
+            <button id="submit-btn" class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-colors">
+                Submit Responses
+            </button>
+        </div>
+
+        <!-- Success State -->
+        <div id="success-state" class="text-center py-16 hidden">
+            <div class="mb-6">
+                <svg class="w-20 h-20 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">Responses Submitted!</h2>
+            <p class="text-gray-400">Your answers have been sent to Helios</p>
+        </div>
+    </div>
+
+    <script>
+        let currentInterview = null;
+        let responses = {};
+
+        // IPC Bridge setup
+        window._heliosInterviewData = function(data) {
+            try {
+                const interviewData = JSON.parse(data);
+                if (interviewData.error) {
+                    console.error('Interview data error:', interviewData.error);
+                    return;
+                }
+                loadInterview(interviewData);
+            } catch (e) {
+                console.error('Error parsing interview data:', e);
+            }
+        };
+
+        function loadInterview(data) {
+            currentInterview = data;
+            responses = {};
+
+            const waitingState = document.getElementById('waiting-state');
+            const formContainer = document.getElementById('form-container');
+            const progressContainer = document.getElementById('progress-container');
+            const submitContainer = document.getElementById('submit-container');
+
+            waitingState.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            submitContainer.classList.remove('hidden');
+
+            // Update progress
+            document.getElementById('total-questions').textContent = data.questions.length;
+            document.getElementById('current-question').textContent = '0';
+            document.getElementById('progress-bar').style.width = '0%';
+
+            // Render questions
+            renderQuestions(data.questions);
+        }
+
+        function renderQuestions(questions) {
+            const container = document.getElementById('form-container');
+            container.innerHTML = '';
+
+            questions.forEach((question, index) => {
+                const questionCard = document.createElement('div');
+                questionCard.className = 'question-card bg-gray-800 rounded-lg p-6 border border-gray-700';
+                questionCard.innerHTML = renderQuestion(question, index);
+                container.appendChild(questionCard);
+            });
+
+            // Add event listeners
+            attachEventListeners(questions);
+        }
+
+        function renderQuestion(question, index) {
+            const questionNumber = index + 1;
+            let inputHTML = '';
+
+            switch (question.type) {
+                case 'text':
+                    inputHTML = `
+                        <input 
+                            type="text" 
+                            id="q-${index}" 
+                            class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                            placeholder="${question.placeholder || 'Type your answer...'}"
+                            ${question.required ? 'required' : ''}
+                        />
+                    `;
+                    break;
+
+                case 'textarea':
+                    inputHTML = `
+                        <textarea 
+                            id="q-${index}" 
+                            rows="4"
+                            class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
+                            placeholder="${question.placeholder || 'Type your answer...'}"
+                            ${question.required ? 'required' : ''}
+                        ></textarea>
+                    `;
+                    break;
+
+                case 'select':
+                    inputHTML = `
+                        <select 
+                            id="q-${index}" 
+                            class="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                            ${question.required ? 'required' : ''}
+                        >
+                            <option value="">Select an option...</option>
+                            ${question.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
+                        </select>
+                    `;
+                    break;
+
+                case 'multiselect':
+                    inputHTML = `
+                        <div class="space-y-2">
+                            ${question.options.map((opt, i) => `
+                                <label class="flex items-center space-x-3 p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        name="q-${index}" 
+                                        value="${opt.value}"
+                                        class="w-5 h-5 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <span class="text-white">${opt.label}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                    break;
+
+                case 'radio':
+                    inputHTML = `
+                        <div class="space-y-2">
+                            ${question.options.map((opt, i) => `
+                                <label class="flex items-center space-x-3 p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors">
+                                    <input 
+                                        type="radio" 
+                                        name="q-${index}" 
+                                        value="${opt.value}"
+                                        class="w-5 h-5 text-blue-600 bg-gray-800 border-gray-600 focus:ring-2 focus:ring-blue-500"
+                                        ${question.required ? 'required' : ''}
+                                    />
+                                    <span class="text-white">${opt.label}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                    break;
+            }
+
+            return `
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">
+                        ${questionNumber}. ${question.question}
+                        ${question.required ? '<span class="text-red-500">*</span>' : ''}
+                    </label>
+                    ${question.description ? `<p class="text-sm text-gray-400 mb-4">${question.description}</p>` : ''}
+                    ${inputHTML}
+                </div>
+            `;
+        }
+
+        function attachEventListeners(questions) {
+            questions.forEach((question, index) => {
+                const element = document.getElementById(`q-${index}`);
+                
+                if (question.type === 'multiselect') {
+                    const checkboxes = document.querySelectorAll(`input[name="q-${index}"]`);
+                    checkboxes.forEach(cb => {
+                        cb.addEventListener('change', () => updateProgress());
+                    });
+                } else if (question.type === 'radio') {
+                    const radios = document.querySelectorAll(`input[name="q-${index}"]`);
+                    radios.forEach(radio => {
+                        radio.addEventListener('change', () => updateProgress());
+                    });
+                } else if (element) {
+                    element.addEventListener('input', () => updateProgress());
+                }
+            });
+        }
+
+        function updateProgress() {
+            if (!currentInterview) return;
+
+            let answered = 0;
+            const total = currentInterview.questions.length;
+
+            currentInterview.questions.forEach((question, index) => {
+                const element = document.getElementById(`q-${index}`);
+                
+                if (question.type === 'multiselect') {
+                    const checked = document.querySelectorAll(`input[name="q-${index}"]:checked`);
+                    if (checked.length > 0) answered++;
+                } else if (question.type === 'radio') {
+                    const checked = document.querySelector(`input[name="q-${index}"]:checked`);
+                    if (checked) answered++;
+                } else if (element && element.value.trim()) {
+                    answered++;
+                }
+            });
+
+            const percentage = Math.round((answered / total) * 100);
+            document.getElementById('current-question').textContent = answered;
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+        }
+
+        function collectResponses() {
+            const responses = {};
+
+            currentInterview.questions.forEach((question, index) => {
+                if (question.type === 'multiselect') {
+                    const checked = Array.from(document.querySelectorAll(`input[name="q-${index}"]:checked`));
+                    responses[question.id] = checked.map(cb => cb.value);
+                } else if (question.type === 'radio') {
+                    const checked = document.querySelector(`input[name="q-${index}"]:checked`);
+                    responses[question.id] = checked ? checked.value : null;
+                } else {
+                    const element = document.getElementById(`q-${index}`);
+                    responses[question.id] = element ? element.value : null;
+                }
+            });
+
+            return responses;
+        }
+
+        function submitInterview() {
+            const responses = collectResponses();
+
+            // Validate required fields
+            let isValid = true;
+            currentInterview.questions.forEach((question, index) => {
+                if (question.required) {
+                    const response = responses[question.id];
+                    if (!response || (Array.isArray(response) && response.length === 0) || response === '') {
+                        isValid = false;
+                        const element = document.getElementById(`q-${index}`);
+                        if (element) {
+                            element.classList.add('border-red-500');
+                            setTimeout(() => element.classList.remove('border-red-500'), 2000);
+                        }
+                    }
+                }
+            });
+
+            if (!isValid) {
+                alert('Please answer all required questions');
+                return;
+            }
+
+            // Send via IPC bridge
+            if (window.helios && window.helios.postMessage) {
+                window.helios.postMessage(JSON.stringify({
+                    type: "interview_response",
+                    interviewId: currentInterview.id,
+                    responses: responses
+                }));
+            } else {
+                console.log('Interview responses:', responses);
+            }
+
+            // Show success state
+            document.getElementById('form-container').classList.add('hidden');
+            document.getElementById('progress-container').classList.add('hidden');
+            document.getElementById('submit-container').classList.add('hidden');
+            document.getElementById('success-state').classList.remove('hidden');
+        }
+
+        // Test interview data
+        function loadTestInterview() {
+            const testData = {
+                id: "test-interview-1",
+                title: "Project Planning Interview",
+                questions: [
+                    {
+                        id: "q1",
+                        type: "text",
+                        question: "What is the name of your project?",
+                        description: "This will help us identify and track your project",
+                        required: true,
+                        placeholder: "e.g., Customer Portal Redesign"
+                    },
+                    {
+                        id: "q2",
+                        type: "textarea",
+                        question: "Describe the main goal of this project",
+                        description: "What problem are you trying to solve?",
+                        required: true,
+                        placeholder: "Describe your project goals..."
+                    },
+                    {
+                        id: "q3",
+                        type: "select",
+                        question: "What is the expected timeline?",
+                        required: true,
+                        options: [
+                            { value: "urgent", label: "Urgent (< 1 week)" },
+                            { value: "short", label: "Short-term (1-4 weeks)" },
+                            { value: "medium", label: "Medium-term (1-3 months)" },
+                            { value: "long", label: "Long-term (3+ months)" }
+                        ]
+                    },
+                    {
+                        id: "q4",
+                        type: "multiselect",
+                        question: "Which technologies will be involved?",
+                        description: "Select all that apply",
+                        required: false,
+                        options: [
+                            { value: "frontend", label: "Frontend (React, Vue, etc.)" },
+                            { value: "backend", label: "Backend (Node, Python, etc.)" },
+                            { value: "database", label: "Database" },
+                            { value: "api", label: "API Integration" },
+                            { value: "devops", label: "DevOps/Infrastructure" }
+                        ]
+                    },
+                    {
+                        id: "q5",
+                        type: "radio",
+                        question: "What is the priority level?",
+                        required: true,
+                        options: [
+                            { value: "critical", label: "Critical - Blocks other work" },
+                            { value: "high", label: "High - Important but not blocking" },
+                            { value: "medium", label: "Medium - Normal priority" },
+                            { value: "low", label: "Low - Can be scheduled later" }
+                        ]
+                    }
+                ]
+            };
+
+            loadInterview(testData);
+        }
+
+        // Event listeners
+        document.getElementById('submit-btn').addEventListener('click', submitInterview);
+        document.getElementById('test-interview-btn').addEventListener('click', loadTestInterview);
+
+        // Listen for interview data from IPC
+        if (window.helios && window.helios.onInterviewData) {
+            window.helios.onInterviewData(window._heliosInterviewData);
+        }
+    </script>
+</body>
+</html>

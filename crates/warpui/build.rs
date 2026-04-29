@@ -202,6 +202,7 @@ fn compile_metal_shaders() {
 }
 
 fn compile_objc_lib() {
+    println!("cargo:rustc-link-lib=framework=WebKit");
     println!("cargo:rustc-link-lib=framework=UserNotifications");
     println!("cargo:rustc-link-lib=framework=Carbon");
     println!("cargo:rustc-link-lib=framework=SystemConfiguration");
@@ -229,6 +230,8 @@ fn compile_objc_lib() {
     println!("cargo:rerun-if-changed=src/platform/mac/objc/alert.h");
     println!("cargo:rerun-if-changed=src/platform/mac/objc/fullscreen_queue.h");
     println!("cargo:rerun-if-changed=src/platform/mac/objc/fullscreen_queue.m");
+    println!("cargo:rerun-if-changed=src/platform/mac/objc/webview.h");
+    println!("cargo:rerun-if-changed=src/platform/mac/objc/webview.m");
 
     // Link against the clang_rt library so that the @available keyword
     // doesn't produce linker errors.
@@ -251,6 +254,7 @@ fn compile_objc_lib() {
         .file("src/platform/mac/objc/fullscreen_queue.m")
         .file("src/platform/mac/objc/window_blur.m")
         .file("src/platform/mac/objc/alert.m")
+        .file("src/platform/mac/objc/webview.m")
         .compile("warp_objc");
 }
 

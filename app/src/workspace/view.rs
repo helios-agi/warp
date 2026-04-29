@@ -66,7 +66,7 @@ use crate::ai_assistant::execution_context::WarpAiExecutionContext;
 use crate::app_state::{
     LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot,
     PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabSnapshot,
-    TerminalPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
+    TerminalPaneSnapshot, WebViewPaneSnapshot, WindowSnapshot, WorkflowPaneSnapshot,
 };
 use crate::code_review::diff_state::DiffStateModel;
 #[cfg(feature = "local_fs")]
@@ -10884,6 +10884,52 @@ impl Workspace {
         self.add_tab_with_pane_layout(panes_layout, Arc::new(HashMap::new()), None, ctx);
     }
 
+    fn webview_resource_url(filename: &str) -> String {
+        // Look in the app bundle Resources directory first
+        let bundle_path = format!(
+            "{}/Contents/Resources/webviews/{}",
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent()?.parent()?.parent().map(|p| p.to_path_buf()))
+                .unwrap_or_default()
+                .display(),
+            filename
+        );
+        if std::path::Path::new(&bundle_path).exists() {
+            return format!("file://{}", bundle_path);
+        }
+        // Fallback: look relative to the cargo manifest dir (dev builds)
+        let dev_path = format!(
+            "{}/app/resources/webviews/{}",
+            env!("CARGO_MANIFEST_DIR")
+                .strip_suffix("/app")
+                .unwrap_or(env!("CARGO_MANIFEST_DIR")),
+            filename
+        );
+        if std::path::Path::new(&dev_path).exists() {
+            return format!("file://{}", dev_path);
+        }
+        // Last resort
+        format!("file:///tmp/{}", filename)
+    }
+
+    pub fn add_tab_for_webview(&mut self, title: &str, url: &str, ctx: &mut ViewContext<Self>) {
+        self.add_tab_with_pane_layout(
+            PanesLayout::Snapshot(Box::new(PaneNodeSnapshot::Leaf(LeafSnapshot {
+                is_focused: true,
+                custom_vertical_tabs_title: None,
+                contents: LeafContents::WebView(WebViewPaneSnapshot {
+                    url: url.to_string(),
+                    title: title.to_string(),
+                }),
+            }))),
+            Arc::new(HashMap::new()),
+            None,
+            ctx,
+        );
+        ctx.notify();
+    }
+
     /// Add a tab with a file notebook pane open.
     pub fn add_tab_for_file_notebook(
         &mut self,
@@ -19755,6 +19801,15 @@ impl TypedActionView for Workspace {
             AddAmbientAgentTab => self.add_ambient_agent_tab(ctx),
             AddAgentTab => self.add_terminal_tab_with_new_agent_view(ctx),
             AddDockerSandboxTab => self.add_docker_sandbox_tab(ctx),
+            OpenWebView { url, title } => self.add_tab_for_webview(&title, &url, ctx),
+            OpenInbox => {
+                let url = Self::webview_resource_url("inbox.html");
+                self.add_tab_for_webview("Inbox", &url, ctx);
+            }
+            OpenCRM => {
+                let url = Self::webview_resource_url("crm.html");
+                self.add_tab_for_webview("CRM", &url, ctx);
+            }
             StartAgentOnboardingTutorial(tutorial) => {
                 self.start_agent_onboarding_tutorial(tutorial.clone(), ctx)
             }

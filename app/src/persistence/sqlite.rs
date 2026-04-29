@@ -94,7 +94,7 @@ use crate::persistence::agent::read_agent_conversations;
 use crate::persistence::block_list::{get_all_restored_blocks, read_ai_queries};
 use crate::persistence::model::{
     NewCloudObjectsRefresh, NewGenericStringObject, NewPersistedObjectAction, NewTeamSettings,
-    ProjectRules, UserProfile, CODE_REVIEW_PANE_KIND, GET_STARTED_PANE_KIND,
+    ProjectRules, UserProfile, CODE_REVIEW_PANE_KIND, GET_STARTED_PANE_KIND, WEBVIEW_PANE_KIND,
 };
 use crate::server::experiments::ServerExperiment;
 use crate::server::ids::{ClientId, HashableId, ServerId, SyncId, ToServerId};
@@ -1052,6 +1052,7 @@ fn save_pane_state(
         LeafContents::AmbientAgent(_) => AMBIENT_AGENT_PANE_KIND,
         LeafContents::ExecutionProfileEditor => EXECUTION_PROFILE_EDITOR_PANE_KIND,
         LeafContents::GetStarted => GET_STARTED_PANE_KIND,
+        LeafContents::WebView(_) => WEBVIEW_PANE_KIND,
         LeafContents::Welcome { .. } => WELCOME_PANE_KIND,
         LeafContents::AIDocument(_) => AI_DOCUMENT_PANE_KIND,
         LeafContents::EnvironmentManagement(_) | LeafContents::NetworkLog => {
@@ -1250,6 +1251,11 @@ fn save_pane_state(
         }
         LeafContents::GetStarted => {
             // Stateless
+        }
+        LeafContents::WebView(snapshot) => {
+            // TODO: Persist WebView state (url, title) if needed
+            // For now, treat as stateless since we don't have a schema yet
+            let _ = snapshot; // Acknowledge we received the snapshot
         }
         LeafContents::Welcome { startup_directory } => {
             let welcome_pane = model::NewWelcomePane {
@@ -2562,6 +2568,14 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
                     }
                 }
                 GET_STARTED_PANE_KIND => LeafContents::GetStarted,
+                WEBVIEW_PANE_KIND => {
+                    // TODO: Restore WebView state from database when schema is added
+                    // For now, return a default WebView pane
+                    LeafContents::WebView(crate::app_state::WebViewPaneSnapshot {
+                        url: String::new(),
+                        title: String::from("WebView"),
+                    })
+                }
                 WELCOME_PANE_KIND => {
                     let welcome_pane = schema::welcome_panes::dsl::welcome_panes
                         .find(node.id)

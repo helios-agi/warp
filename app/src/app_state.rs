@@ -139,6 +139,7 @@ pub enum LeafContents {
     },
     /// A new first-time user experience which prioritizes choosing a coding repository.
     GetStarted,
+    WebView(WebViewPaneSnapshot),
 }
 
 #[cfg(feature = "local_fs")]
@@ -160,7 +161,9 @@ impl LeafContents {
             LeafContents::NetworkLog
             // Environment management panes are opened on-demand via workspace
             // actions and have no persistable state.
-            | LeafContents::EnvironmentManagement(_) => false,
+            | LeafContents::EnvironmentManagement(_)
+            // WebView panes are not persisted until schema migration is added.
+            | LeafContents::WebView(_) => false,
             LeafContents::Terminal(_)
             | LeafContents::Notebook(_)
             | LeafContents::AIDocument(_)
@@ -185,6 +188,13 @@ pub struct AmbientAgentPaneSnapshot {
     // `task_id` is purposefully optional,
     // as you can have a valid state (i.e. an empty cloud mode pane) where it is None.
     pub task_id: Option<AmbientAgentTaskId>,
+}
+
+/// Snapshot of a WebView pane.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WebViewPaneSnapshot {
+    pub url: String,
+    pub title: String,
 }
 
 /// Snapshot of the contents of a terminal pane.

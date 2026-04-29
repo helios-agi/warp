@@ -30,6 +30,7 @@ use crate::notebooks::file::FileNotebookView;
 use crate::pane_group::focus_state::PaneGroupFocusEvent;
 use crate::pane_group::pane::get_started_pane::GetStartedPane;
 use crate::pane_group::pane::welcome_pane::WelcomePane;
+use crate::pane_group::pane::webview_pane::WebViewPane;
 use crate::pane_group::pane::ActionOrigin;
 use crate::quit_warning::UnsavedStateSummary;
 #[cfg(target_family = "wasm")]
@@ -106,7 +107,7 @@ use crate::app_state::CodePaneSnapShot;
 use crate::app_state::{
     self, AIFactPaneSnapshot, BranchSnapshot, EnvVarCollectionPaneSnapshot, LeafContents,
     LeafSnapshot, NotebookPaneSnapshot, PaneNodeSnapshot, PaneUuid, SettingsPaneSnapshot,
-    TerminalPaneSnapshot, WorkflowPaneSnapshot,
+    TerminalPaneSnapshot, WebViewPaneSnapshot, WorkflowPaneSnapshot,
 };
 use crate::appearance::Appearance;
 use crate::banner::{Banner, BannerEvent, BannerState, BannerTextContent, DismissalType};
@@ -1915,6 +1916,17 @@ impl PaneGroup {
                     };
                     Ok((PaneData::new(pane_id), focus))
                 }
+            }
+            LeafContents::WebView(snapshot) => {
+                let pane: Box<dyn AnyPaneContent + 'static> =
+                    Box::new(WebViewPane::new(snapshot.url.clone(), snapshot.title.clone(), ctx));
+                let pane_id = pane.as_pane().id();
+                pane_contents.insert(pane_id, pane);
+                let focus = InitialFocus {
+                    focused_pane: leaf.is_focused.then_some(pane_id),
+                    active_session: None,
+                };
+                Ok((PaneData::new(pane_id), focus))
             }
             LeafContents::EnvironmentManagement(_) => {
                 // Environment management panes are not restored from persistence.
