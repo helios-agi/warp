@@ -16993,7 +16993,7 @@ impl Workspace {
             // Left: Warp logo - clickable to link to warp.dev
             let warp_logo = Hoverable::new(self.mouse_states.warp_logo.clone(), |_state| {
                 ConstrainedBox::new(
-                    warp_core::ui::Icon::Warp
+                    warp_core::ui::Icon::HeliosLogo
                         .to_warpui_icon(appearance.theme().foreground())
                         .finish(),
                 )

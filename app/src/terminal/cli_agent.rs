@@ -178,7 +178,7 @@ impl CLIAgent {
             CLIAgent::Droid => Some(Icon::DroidLogo),
             CLIAgent::OpenCode => Some(Icon::OpenCodeLogo),
             CLIAgent::Copilot => Some(Icon::CopilotLogo),
-            CLIAgent::Pi => Some(Icon::PiLogo),
+            CLIAgent::Pi => Some(Icon::HeliosLogo),
             CLIAgent::Auggie => Some(Icon::AuggieLogo),
             CLIAgent::CursorCli => Some(Icon::CursorLogo),
             CLIAgent::Unknown => None,
