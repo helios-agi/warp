@@ -1247,7 +1247,7 @@ define_settings_group!(AISettings, settings: [
     // auto-opens once when the session starts or when the listener is registered.
     auto_open_rich_input_on_cli_agent_start: AutoOpenRichInputOnCLIAgentStart {
         type: bool,
-        default: false,
+        default: true,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         private: false,
@@ -1261,7 +1261,7 @@ define_settings_group!(AISettings, settings: [
     // from auto_toggle_rich_input handles rich input lifecycle).
     auto_dismiss_rich_input_after_submit: AutoDismissRichInputAfterSubmit {
         type: bool,
-        default: false,
+        default: true,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         private: false,
