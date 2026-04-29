@@ -101,6 +101,12 @@ pub enum MCPServersListPageViewAction {
     ToggleFileBasedMcp,
 }
 
+const HELIOS_SERVER_1: &str = "• GitHub — @modelcontextprotocol/server-github — Connected";
+const HELIOS_SERVER_2: &str = "• Memgraph — mcp-memgraph — bolt://127.0.0.1:7687";
+const HELIOS_SERVER_3: &str = "• Figma — figma-remote — HTTP bearer";
+const HELIOS_SERVER_4: &str = "• Superhuman — superhuman-mail — Email integration";
+const HELIOS_SERVER_5: &str = "• Google Workspace — google-workspace — Calendar, Drive, Docs";
+
 const EMPTY_STATE_TEXT: &str = "Once you add a MCP server, it will be shown here.";
 const NO_SEARCH_RESULTS_TEXT: &str = "No search results found";
 
@@ -1487,28 +1493,100 @@ impl MCPServersListPageView {
     }
 
     fn render_empty_state(&self, appearance: &Appearance, _app: &AppContext) -> Box<dyn Element> {
-        Container::new(
-            ConstrainedBox::new(
-                Align::new(
-                    Flex::column()
-                        .with_main_axis_size(MainAxisSize::Max)
-                        .with_main_axis_alignment(MainAxisAlignment::Center)
-                        .with_cross_axis_alignment(CrossAxisAlignment::Center)
-                        .with_child(
-                            appearance
-                                .ui_builder()
-                                .wrappable_text(EMPTY_STATE_TEXT, true)
-                                .with_style(style::description_text(appearance))
-                                .build()
-                                .finish(),
-                        )
-                        .with_child(self.render_add_button())
-                        .finish(),
-                )
+        let mut column = Flex::column()
+            .with_spacing(12.);
+
+        // Add header text
+        column.add_child(
+            appearance
+                .ui_builder()
+                .wrappable_text("Helios Pre-configured MCP Servers", false)
+                .with_style(UiComponentStyles {
+                    foreground: Some(Fill::Solid(
+                        blended_colors::text_main(appearance.theme(), appearance.theme().surface_1()),
+                    )),
+                    font_size: Some(14.),
+                    ..Default::default()
+                })
+                .build()
                 .finish(),
+        );
+
+        column.add_child(
+            appearance
+                .ui_builder()
+                .wrappable_text("The following MCP servers are configured for Helios:", true)
+                .with_style(style::description_text(appearance))
+                .build()
+                .finish(),
+        );
+
+        // Add server list
+        let server_texts = [
+            HELIOS_SERVER_1,
+            HELIOS_SERVER_2,
+            HELIOS_SERVER_3,
+            HELIOS_SERVER_4,
+            HELIOS_SERVER_5,
+        ];
+
+        let mut server_list = Flex::column()
+            .with_spacing(6.);
+
+        for &server_text in &server_texts {
+            server_list.add_child(
+                appearance
+                    .ui_builder()
+                    .wrappable_text(server_text, true)
+                    .with_style(UiComponentStyles {
+                        foreground: Some(Fill::Solid(
+                            blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1()),
+                        )),
+                        font_size: Some(12.),
+                        ..Default::default()
+                    })
+                    .build()
+                    .finish(),
+            );
+        }
+
+        column.add_child(
+            Container::new(server_list.finish())
+                .with_margin_left(8.)
+                .finish(),
+        );
+
+        // Add footer text
+        column.add_child(
+            Container::new(
+                appearance
+                    .ui_builder()
+                    .wrappable_text("To add custom MCP servers or modify these configurations, edit ~/.pi/agent/mcp.json", true)
+                    .with_style(UiComponentStyles {
+                        foreground: Some(Fill::Solid(
+                            blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1()),
+                        )),
+                        font_size: Some(11.),
+                        ..Default::default()
+                    })
+                    .build()
+                    .finish(),
             )
-            .with_height(style::EMPTY_STATE_HEIGHT)
+            .with_margin_top(8.)
             .finish(),
+        );
+
+        // Add the "+ Add" button
+        column.add_child(
+            Container::new(self.render_add_button())
+                .with_margin_top(12.)
+                .finish(),
+        );
+
+        Container::new(
+            Container::new(column.finish())
+                .with_uniform_padding(20.)
+                .finish(),
         )
         .with_border(
             Border::all(1.).with_border_color(internal_colors::neutral_2(appearance.theme())),

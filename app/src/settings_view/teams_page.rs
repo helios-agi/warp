@@ -87,7 +87,7 @@ const TEAM_MEMBERS_HEADER_POSITION_ID: &str = "team_settings:team_members_header
 // Styling for team create page
 const TEAM_NAME_EDITOR_PLACEHOLDER_TEXT: &str = "Team name";
 const CREATE_TEAM_BUTTON_LEFT_PADDING: f32 = 10.;
-const CREATE_TEAM_DESCRIPTION: &str = "When you create a team, you can collaborate on agent-driven development by sharing cloud agent runs, environments, automations, and artifacts. You can also create a shared knowledge store for teammates and agents alike.";
+const CREATE_TEAM_DESCRIPTION: &str = "When you create a team, you can collaborate on agent-driven development by sharing Helios agent runs, environments, automations, and artifacts. You can also create a shared knowledge store for teammates and agents alike.";
 
 // Styling for team management page
 const LEAVE_TEAM_BUTTON_LABEL: &str = "Leave team";
@@ -125,11 +125,11 @@ const OFFLINE_TEXT: &str = "You are offline.";
 
 const LIMIT_HIT_ADMIN_TEXT: &str =
     "You've reached the team member limit for your plan. Upgrade to add more teammates.";
-const LIMIT_HIT_ADMIN_NOT_AUTO_UPGRADEABLE_TEXT: &str = "You've reached the team member limit for your plan. Contact support@warp.dev to add more teammates.";
+const LIMIT_HIT_ADMIN_NOT_AUTO_UPGRADEABLE_TEXT: &str = "You've reached the team member limit for your plan. Contact support@helios-terminal.dev to add more teammates.";
 const LIMIT_HIT_NON_ADMIN_TEXT: &str =
     "You've reached the team member limit for your plan. Contact a team admin to add more teammates.";
 
-const DELINQUENT_ADMIN_NON_SELF_SERVE_TEXT: &str = "Team invites have been restricted due to a payment issue. Please contact support@warp.dev to restore access.";
+const DELINQUENT_ADMIN_NON_SELF_SERVE_TEXT: &str = "Team invites have been restricted due to a payment issue. Please contact support@helios-terminal.dev to restore access.";
 const DELINQUENT_NON_ADMIN_TEXT: &str = "Team invites have been restricted due to a payment issue. Please contact a team admin to restore access.";
 const DELINQUENT_ADMIN_SELF_SERVE_LINE_1_TEXT: &str =
     "Team invites have been restricted due to a subscription payment issue.";
@@ -137,7 +137,7 @@ const DELINQUENT_ADMIN_SELF_SERVE_LINE_2_PREFIX_TEXT: &str = "Please ";
 const DELINQUENT_ADMIN_SELF_SERVE_LINE_2_LINK_TEXT: &str = "update your payment information";
 const DELINQUENT_ADMIN_SELF_SERVE_LINE_2_SUFFIX_TEXT: &str = " to restore access.";
 
-const TEAM_LIMIT_EXCEEDED_ADMIN_NOT_AUTO_UPGRADEABLE_TEXT: &str = "You've exceeded the team member limit for your plan. Please contact support@warp.dev to upgrade your team.";
+const TEAM_LIMIT_EXCEEDED_ADMIN_NOT_AUTO_UPGRADEABLE_TEXT: &str = "You've exceeded the team member limit for your plan. Please contact support@helios-terminal.dev to upgrade your team.";
 const TEAM_LIMIT_EXCEEDED_NON_ADMIN_TEXT: &str =
     "You've exceeded the team member limit for your plan. Contact a team admin to upgrade your team.";
 const TEAM_LIMIT_EXCEEDED_ADMIN_UPGRADEABLE: &str =
@@ -930,7 +930,7 @@ impl TeamsPageView {
                 ctx.open_url(upgrade_link);
             }
             UserWorkspacesEvent::GenerateUpgradeLinkRejected(err) => self.show_error(
-                "Failed to generate upgrade link. Please contact us at feedback@warp.dev",
+                "Failed to generate upgrade link. Please contact us at feedback@helios-terminal.dev",
                 Some(err),
                 ctx,
             ),
@@ -938,7 +938,7 @@ impl TeamsPageView {
                 ctx.open_url(billing_session_link);
             }
             UserWorkspacesEvent::GenerateStripeBillingPortalLinkRejected(err) => self.show_error(
-                "Failed to generate billing link. Please contact us at feedback@warp.dev",
+                "Failed to generate billing link. Please contact us at feedback@helios-terminal.dev",
                 Some(err),
                 ctx,
             ),
@@ -1778,9 +1778,9 @@ impl TeamsWidget {
         has_admin_permissions: bool,
     ) -> Box<dyn Element> {
         let prorated_message = if has_admin_permissions {
-            "You'll be charged for a portion of the team member's usage of Warp."
+            "You'll be charged for a portion of the team member's usage of Helios."
         } else {
-            "Your admin will be charged for a portion of the team member's usage of Warp."
+            "Your admin will be charged for a portion of the team member's usage of Helios."
         };
 
         let additional_members_cost_money_msg = if let Some((monthly_cost, yearly_cost)) =
@@ -2976,7 +2976,7 @@ impl TeamsWidget {
         // Instruction text for toggle
         let domain = current_user_email.split('@').nth(1).unwrap_or("");
         let team_discoverability_instructions =
-            format!("Allow Warp users with an @{domain} email to find and join the team.");
+            format!("Allow Helios users with an @{domain} email to find and join the team.");
         section.add_child(
             Container::new(self.render_sub_text(
                 team_discoverability_instructions,
@@ -3682,9 +3682,9 @@ impl TeamsWidget {
             .with_margin_left(-4.)
             .finish();
             let checkbox_row_text = if let Some(domain) = view.auth_state.user_email_domain() {
-                format!("Allow Warp users with an @{domain} email to find and join the team.")
+                format!("Allow Helios users with an @{domain} email to find and join the team.")
             } else {
-                "Allow Warp users with the same email domain as you to find and join the team."
+                "Allow Helios users with the same email domain as you to find and join the team."
                     .to_string()
             };
             let checkbox_row = Container::new(
@@ -4081,17 +4081,17 @@ impl SettingsWidget for TeamsWidget {
 #[cfg(test)]
 #[test]
 pub fn test_valid_domains() {
-    assert!(!TeamsPageView::is_valid_domain("@warp.dev"));
-    assert!(!TeamsPageView::is_valid_domain("warp,"));
-    assert!(!TeamsPageView::is_valid_domain("warpdev"));
+    assert!(!TeamsPageView::is_valid_domain("@helios-terminal.dev"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminal,"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminaldev"));
     assert!(!TeamsPageView::is_valid_domain(".dev"));
-    assert!(!TeamsPageView::is_valid_domain("warp..dev"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminal..dev"));
     assert!(!TeamsPageView::is_valid_domain(" "));
-    assert!(!TeamsPageView::is_valid_domain("warp!.dev"));
-    assert!(!TeamsPageView::is_valid_domain("warp.dev>"));
-    assert!(!TeamsPageView::is_valid_domain("warp.dev."));
-    assert!(TeamsPageView::is_valid_domain("app.warp.dev"));
-    assert!(TeamsPageView::is_valid_domain("warp0.dev0"));
-    assert!(TeamsPageView::is_valid_domain("warp.dev"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminal!.dev"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminal.dev>"));
+    assert!(!TeamsPageView::is_valid_domain("helios-terminal.dev."));
+    assert!(TeamsPageView::is_valid_domain("app.helios-terminal.dev"));
+    assert!(TeamsPageView::is_valid_domain("helios-terminal0.dev0"));
+    assert!(TeamsPageView::is_valid_domain("helios-terminal.dev"));
     assert!(TeamsPageView::is_valid_domain("miniclip.com"));
 }

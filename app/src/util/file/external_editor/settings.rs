@@ -70,7 +70,7 @@ impl<'de> Deserialize<'de> for EditorChoice {
 define_settings_group!(EditorSettings, settings: [
     open_file_editor: OpenFileEditor {
         type: EditorChoice,
-        default: EditorChoice::SystemDefault,
+        default: EditorChoice::Warp,
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Never,
         private: false,
