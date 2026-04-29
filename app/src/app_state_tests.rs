@@ -104,3 +104,22 @@ fn test_code_pane_snapshot_with_multiple_tabs() {
     assert_eq!(tabs[2].path, None);
     assert!(matches!(source, Some(CodeSource::Link { .. })));
 }
+
+#[test]
+fn test_webview_snapshot_stores_url_and_title() {
+    let snapshot = WebViewPaneSnapshot {
+        url: "file:///test.html".to_string(),
+        title: "Test Page".to_string(),
+    };
+    assert_eq!(snapshot.url, "file:///test.html");
+    assert_eq!(snapshot.title, "Test Page");
+}
+
+#[test]
+fn test_webview_leaf_contents_not_persisted() {
+    let contents = LeafContents::WebView(WebViewPaneSnapshot {
+        url: "file:///test.html".to_string(),
+        title: "Test".to_string(),
+    });
+    assert!(!contents.is_persisted());
+}

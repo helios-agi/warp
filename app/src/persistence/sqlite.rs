@@ -1252,10 +1252,10 @@ fn save_pane_state(
         LeafContents::GetStarted => {
             // Stateless
         }
-        LeafContents::WebView(snapshot) => {
-            // TODO: Persist WebView state (url, title) if needed
-            // For now, treat as stateless since we don't have a schema yet
-            let _ = snapshot; // Acknowledge we received the snapshot
+        LeafContents::WebView(_) => {
+            // WebView panes are not persisted (is_persisted() == false).
+            // This arm should be unreachable — included as a defensive guard.
+            return Ok(());
         }
         LeafContents::Welcome { startup_directory } => {
             let welcome_pane = model::NewWelcomePane {

@@ -1,15 +1,25 @@
 #import "webview.h"
 
+// Shared process pool for all webviews (memory/process efficiency)
+static WKProcessPool* _sharedProcessPool = nil;
+
+static WKProcessPool* sharedProcessPool(void) {
+    if (!_sharedProcessPool) {
+        _sharedProcessPool = [[WKProcessPool alloc] init];
+    }
+    return _sharedProcessPool;
+}
+
 // Message handler delegate — stores per-instance callback and context pointer
-@interface HeliosMessageHandler : NSObject <WKScriptMessageHandler> {
-    helios_webview_ipc_callback _callback;
+@interface WarpWebViewMessageHandler : NSObject <WKScriptMessageHandler> {
+    warp_webview_ipc_callback _callback;
     void* _context;
 }
-- (instancetype)initWithCallback:(helios_webview_ipc_callback)callback context:(void*)context;
+- (instancetype)initWithCallback:(warp_webview_ipc_callback)callback context:(void*)context;
 @end
 
-@implementation HeliosMessageHandler
-- (instancetype)initWithCallback:(helios_webview_ipc_callback)callback context:(void*)context {
+@implementation WarpWebViewMessageHandler
+- (instancetype)initWithCallback:(warp_webview_ipc_callback)callback context:(void*)context {
     self = [super init];
     if (self) {
         _callback = callback;
@@ -27,12 +37,15 @@
 }
 @end
 
-id helios_webview_create(NSRect frame, const char* initial_url,
-                         helios_webview_ipc_callback callback, void* context) {
+id warp_webview_create(NSRect frame, const char* initial_url,
+                       warp_webview_ipc_callback callback, void* context) {
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
 
+    // Use shared process pool for memory efficiency
+    config.processPool = sharedProcessPool();
+
     // Set up per-instance IPC message handler
-    HeliosMessageHandler* handler = [[HeliosMessageHandler alloc] initWithCallback:callback context:context];
+    WarpWebViewMessageHandler* handler = [[WarpWebViewMessageHandler alloc] initWithCallback:callback context:context];
     [config.userContentController addScriptMessageHandler:handler name:@"helios"];
 
     // Inject IPC bridge script
@@ -92,7 +105,7 @@ id helios_webview_create(NSRect frame, const char* initial_url,
     return webview;
 }
 
-void helios_webview_load_url(id webview, const char* url) {
+void warp_webview_load_url(id webview, const char* url) {
     NSString* urlStr = [NSString stringWithUTF8String:url];
     NSURL* nsurl = [NSURL URLWithString:urlStr];
     if (!nsurl) {
@@ -120,29 +133,29 @@ void helios_webview_load_url(id webview, const char* url) {
     }
 }
 
-void helios_webview_load_html(id webview, const char* html) {
+void warp_webview_load_html(id webview, const char* html) {
     NSString* htmlStr = [NSString stringWithUTF8String:html];
     [(WKWebView*)webview loadHTMLString:htmlStr baseURL:nil];
 }
 
-void helios_webview_set_frame(id webview, NSRect frame) {
+void warp_webview_set_frame(id webview, NSRect frame) {
     [(WKWebView*)webview setFrame:frame];
 }
 
-void helios_webview_add_to_view(id webview, id parent_view) {
+void warp_webview_add_to_view(id webview, id parent_view) {
     [(NSView*)parent_view addSubview:(WKWebView*)webview];
 }
 
-void helios_webview_remove(id webview) {
+void warp_webview_remove(id webview) {
     [(WKWebView*)webview removeFromSuperview];
 }
 
-void helios_webview_eval_js(id webview, const char* js) {
+void warp_webview_eval_js(id webview, const char* js) {
     NSString* jsStr = [NSString stringWithUTF8String:js];
     [(WKWebView*)webview evaluateJavaScript:jsStr completionHandler:nil];
 }
 
-void helios_webview_release(id webview) {
+void warp_webview_release(id webview) {
     WKWebView* wv = (WKWebView*)webview;
     // Remove message handler to break retain cycle
     [wv.configuration.userContentController removeScriptMessageHandlerForName:@"helios"];
@@ -153,7 +166,7 @@ void helios_webview_release(id webview) {
     #endif
 }
 
-void helios_webview_set_autoresize(id webview) {
+void warp_webview_set_autoresize(id webview) {
     WKWebView* wv = (WKWebView*)webview;
     wv.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 }
