@@ -5,14 +5,18 @@ use std::os::raw::c_char;
 
 // FFI declarations matching webview.h
 extern "C" {
-    fn helios_webview_create(frame: NSRect, initial_url: *const c_char) -> id;
+    fn helios_webview_create(
+        frame: NSRect,
+        initial_url: *const c_char,
+        callback: Option<extern "C" fn(*mut std::ffi::c_void, *const c_char)>,
+        context: *mut std::ffi::c_void,
+    ) -> id;
     fn helios_webview_load_url(webview: id, url: *const c_char);
     fn helios_webview_load_html(webview: id, html: *const c_char);
     fn helios_webview_set_frame(webview: id, frame: NSRect);
     fn helios_webview_add_to_view(webview: id, parent_view: id);
     fn helios_webview_remove(webview: id);
     fn helios_webview_eval_js(webview: id, js: *const c_char);
-    fn helios_webview_set_ipc_callback(callback: extern "C" fn(*const c_char));
     fn helios_webview_release(webview: id);
 }
 
@@ -22,10 +26,15 @@ pub struct HeliosWebView {
 }
 
 impl HeliosWebView {
-    pub fn new(frame: NSRect, url: Option<&str>) -> Self {
+    pub fn new(
+        frame: NSRect,
+        url: Option<&str>,
+        callback: Option<extern "C" fn(*mut std::ffi::c_void, *const c_char)>,
+        context: *mut std::ffi::c_void,
+    ) -> Self {
         let c_url = url.and_then(|u| CString::new(u).ok());
         let ptr = c_url.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null());
-        let native = unsafe { helios_webview_create(frame, ptr) };
+        let native = unsafe { helios_webview_create(frame, ptr, callback, context) };
         Self { native }
     }
 
@@ -65,9 +74,4 @@ impl Drop for HeliosWebView {
     fn drop(&mut self) {
         unsafe { helios_webview_release(self.native) };
     }
-}
-
-/// Set the global IPC callback
-pub fn set_ipc_callback(callback: extern "C" fn(*const c_char)) {
-    unsafe { helios_webview_set_ipc_callback(callback) };
 }

@@ -1,30 +1,39 @@
 #import "webview.h"
 
-// Global IPC callback pointer (set from Rust)
-static helios_webview_ipc_callback _ipc_callback = NULL;
-
-// Message handler delegate
-@interface HeliosMessageHandler : NSObject <WKScriptMessageHandler>
+// Message handler delegate — stores per-instance callback and context pointer
+@interface HeliosMessageHandler : NSObject <WKScriptMessageHandler> {
+    helios_webview_ipc_callback _callback;
+    void* _context;
+}
+- (instancetype)initWithCallback:(helios_webview_ipc_callback)callback context:(void*)context;
 @end
 
 @implementation HeliosMessageHandler
+- (instancetype)initWithCallback:(helios_webview_ipc_callback)callback context:(void*)context {
+    self = [super init];
+    if (self) {
+        _callback = callback;
+        _context = context;
+    }
+    return self;
+}
+
 - (void)userContentController:(WKUserContentController *)controller
       didReceiveScriptMessage:(WKScriptMessage *)message {
-    if (_ipc_callback && [message.body isKindOfClass:[NSString class]]) {
+    if (_callback && [message.body isKindOfClass:[NSString class]]) {
         const char* body = [(NSString*)message.body UTF8String];
-        _ipc_callback(body);
+        _callback(_context, body);
     }
 }
 @end
 
-static HeliosMessageHandler* _handler = nil;
-
-id helios_webview_create(NSRect frame, const char* initial_url) {
+id helios_webview_create(NSRect frame, const char* initial_url,
+                         helios_webview_ipc_callback callback, void* context) {
     WKWebViewConfiguration* config = [[WKWebViewConfiguration alloc] init];
 
-    // Set up IPC message handler
-    _handler = [[HeliosMessageHandler alloc] init];
-    [config.userContentController addScriptMessageHandler:_handler name:@"helios"];
+    // Set up per-instance IPC message handler
+    HeliosMessageHandler* handler = [[HeliosMessageHandler alloc] initWithCallback:callback context:context];
+    [config.userContentController addScriptMessageHandler:handler name:@"helios"];
 
     // Inject IPC bridge script
     NSString* bridge = @"window.helios = { postMessage: function(msg) { "
@@ -54,8 +63,17 @@ id helios_webview_create(NSRect frame, const char* initial_url) {
                 url = [NSURL URLWithString:encoded];
             }
             if (url) {
-                NSURL* dir = [url URLByDeletingLastPathComponent];
-                [webview loadFileURL:url allowingReadAccessToDirectory:dir];
+                // Restrict read access to the webviews/ bundle directory only
+                NSString* webviewsDir = [[[NSBundle mainBundle] resourceURL]
+                    URLByAppendingPathComponent:@"webviews"].path;
+                NSURL* allowedDir;
+                if (webviewsDir && [[NSFileManager defaultManager] fileExistsAtPath:webviewsDir]) {
+                    allowedDir = [NSURL fileURLWithPath:webviewsDir];
+                } else {
+                    // Fallback to file's own directory (dev builds)
+                    allowedDir = [url URLByDeletingLastPathComponent];
+                }
+                [webview loadFileURL:url allowingReadAccessToDirectory:allowedDir];
             }
         } else {
             NSURL* url = [NSURL URLWithString:urlStr];
@@ -85,8 +103,17 @@ void helios_webview_load_url(id webview, const char* url) {
     if (!nsurl) return; // Invalid URL, skip
     
     if ([urlStr hasPrefix:@"file://"]) {
-        NSURL* dir = [nsurl URLByDeletingLastPathComponent];
-        [(WKWebView*)webview loadFileURL:nsurl allowingReadAccessToDirectory:dir];
+        // Restrict read access to the webviews/ bundle directory only
+        NSString* webviewsDir = [[[NSBundle mainBundle] resourceURL]
+            URLByAppendingPathComponent:@"webviews"].path;
+        NSURL* allowedDir;
+        if (webviewsDir && [[NSFileManager defaultManager] fileExistsAtPath:webviewsDir]) {
+            allowedDir = [NSURL fileURLWithPath:webviewsDir];
+        } else {
+            // Fallback to file's own directory (dev builds)
+            allowedDir = [nsurl URLByDeletingLastPathComponent];
+        }
+        [(WKWebView*)webview loadFileURL:nsurl allowingReadAccessToDirectory:allowedDir];
     } else {
         NSURLRequest* req = [NSURLRequest requestWithURL:nsurl];
         [(WKWebView*)webview loadRequest:req];
@@ -113,10 +140,6 @@ void helios_webview_remove(id webview) {
 void helios_webview_eval_js(id webview, const char* js) {
     NSString* jsStr = [NSString stringWithUTF8String:js];
     [(WKWebView*)webview evaluateJavaScript:jsStr completionHandler:nil];
-}
-
-void helios_webview_set_ipc_callback(helios_webview_ipc_callback callback) {
-    _ipc_callback = callback;
 }
 
 void helios_webview_release(id webview) {

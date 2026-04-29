@@ -310,16 +310,10 @@
             loading.classList.remove('hidden');
 
             if (window.helios && window.helios.postMessage) {
-                // Query Memgraph for real firm data
                 window.helios.postMessage(JSON.stringify({
-                    type: "query",
-                    cypher: `
-                        MATCH (f:Firm)
-                        OPTIONAL MATCH (f)-[:HAS_CONTACT]->(c:Contact)
-                        RETURN f, collect({name: c.name, role: c.role, email: c.email}) as contacts
-                        ORDER BY f.lastContact DESC
-                        LIMIT 50
-                    `
+                    type: "operation",
+                    name: "crm.firms",
+                    params: {limit: 50}
                 }));
             } else {
                 // IPC not available, use placeholder data

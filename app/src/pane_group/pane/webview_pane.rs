@@ -78,7 +78,7 @@ impl PaneContent for WebViewPane {
                         NSPoint::new(0.0, 0.0),
                         NSSize::new(800.0, 600.0),
                     );
-                    let webview = HeliosWebView::new(frame, Some(&self.url));
+                    let webview = HeliosWebView::new(frame, Some(&self.url), None, std::ptr::null_mut());
                     webview.add_to_view(content_view);
                     *self.native_webview.borrow_mut() = Some(webview);
                 }

@@ -178,10 +178,10 @@
             loading.classList.remove('hidden');
 
             if (window.helios && window.helios.postMessage) {
-                // Query Memgraph for real email data
                 window.helios.postMessage(JSON.stringify({
-                    type: "query",
-                    cypher: "MATCH (e:Email) RETURN e ORDER BY e.date DESC LIMIT 50"
+                    type: "operation",
+                    name: "inbox.list",
+                    params: {limit: 50}
                 }));
             } else {
                 // IPC not available, use placeholder data

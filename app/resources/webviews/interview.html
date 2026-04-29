@@ -405,6 +405,15 @@
         document.getElementById('submit-btn').addEventListener('click', submitInterview);
         document.getElementById('test-interview-btn').addEventListener('click', loadTestInterview);
 
+        // Request interview data via named operation
+        if (window.helios && window.helios.postMessage) {
+            window.helios.postMessage(JSON.stringify({
+                type: "operation",
+                name: "interview.load",
+                params: {}
+            }));
+        }
+
         // Listen for interview data from IPC
         if (window.helios && window.helios.onInterviewData) {
             window.helios.onInterviewData(window._heliosInterviewData);
