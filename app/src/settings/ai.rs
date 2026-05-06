@@ -1462,8 +1462,8 @@ define_settings_group!(AISettings, settings: [
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::No),
         private: false,
-        toml_path: "agents.oz.other.agent_attribution_enabled",
-        description: "Whether Oz adds an attribution co-author line to commit messages and pull requests it creates.",
+        toml_path: "agents.warp_agent.other.agent_attribution_enabled",
+        description: "Whether the Warp Agent adds an attribution co-author line to commit messages and pull requests it creates.",
     }
 ]);
 
@@ -1733,11 +1733,7 @@ impl AISettings {
     }
 
     pub fn is_command_denylist_editable(&self, app: &AppContext) -> bool {
-        let set_by_workspace = UserWorkspaces::as_ref(app)
-            .ai_autonomy_settings()
-            .has_override_for_execute_commands_denylist();
-
-        self.is_any_ai_enabled(app) && !set_by_workspace
+        self.is_any_ai_enabled(app)
     }
 
     pub fn is_command_allowlist_editable(&self, app: &AppContext) -> bool {
