@@ -143,7 +143,9 @@ impl AgentNotificationsModel {
             }
             CLIAgentSessionsModelEvent::Started { .. }
             | CLIAgentSessionsModelEvent::InputSessionChanged { .. }
-            | CLIAgentSessionsModelEvent::SessionUpdated { .. } => {}
+            | CLIAgentSessionsModelEvent::SessionUpdated { .. }
+            | CLIAgentSessionsModelEvent::InterviewRequested { .. }
+            | CLIAgentSessionsModelEvent::DesignDeckRequested { .. } => {}
             CLIAgentSessionsModelEvent::StatusChanged {
                 terminal_view_id,
                 agent,
