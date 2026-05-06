@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Helios Brain</title>
+    <link rel="stylesheet" href="css/helios.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Brain</h1>
+                <p class="text-sm text-gray-400" id="subtitle">Knowledge graph and reasoning state</p>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot connecting" id="status-dot"></span>
+                <span id="status-text">Waiting...</span>
+            </div>
+        </div>
+
+        <div id="content" class="space-y-6">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Active Nodes</h3>
+                <div id="nodes-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No active nodes yet.</p>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Recent Connections</h3>
+                <div id="connections-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No connections recorded.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window._heliosBrainData = function(data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.nodes) renderNodes(parsed.nodes);
+                if (parsed.connections) renderConnections(parsed.connections);
+                document.getElementById('status-dot').className = 'status-dot connected';
+                document.getElementById('status-text').textContent = 'Live';
+            } catch (e) {
+                console.error('Brain data parse error:', e);
+            }
+        };
+
+        function renderNodes(nodes) {
+            const el = document.getElementById('nodes-list');
+            el.innerHTML = nodes.map(n =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <span class="text-sm">${n.label || n.id}</span>
+                    <span class="text-xs text-gray-500">${n.type || ''}</span>
+                </div>`
+            ).join('');
+        }
+
+        function renderConnections(conns) {
+            const el = document.getElementById('connections-list');
+            el.innerHTML = conns.map(c =>
+                `<div class="flex items-center gap-2 p-3 bg-gray-900 rounded-lg text-sm">
+                    <span class="text-blue-400">${c.from}</span>
+                    <span class="text-gray-500">→</span>
+                    <span class="text-green-400">${c.to}</span>
+                    <span class="text-xs text-gray-500 ml-auto">${c.relation || ''}</span>
+                </div>`
+            ).join('');
+        }
+
+        if (window.__pendingBrainData) {
+            try { window._heliosBrainData(window.__pendingBrainData); window.__pendingBrainData = null; } catch(e) {}
+        }
+    </script>
+</body>
+</html>

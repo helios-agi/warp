@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Helios Pulse</title>
+    <link rel="stylesheet" href="css/helios.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Pulse</h1>
+                <p class="text-sm text-gray-400">System health and metrics</p>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot connecting" id="status-dot"></span>
+                <span id="status-text">Waiting...</span>
+            </div>
+        </div>
+
+        <div id="metrics-grid" class="grid gap-4" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Tokens In</p>
+                <p class="text-2xl font-bold mt-1" id="tokens-in">—</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Tokens Out</p>
+                <p class="text-2xl font-bold mt-1" id="tokens-out">—</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Cost (USD)</p>
+                <p class="text-2xl font-bold mt-1" id="cost-usd">—</p>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Active Sessions</p>
+                <p class="text-2xl font-bold mt-1" id="active-sessions">—</p>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="font-semibold mb-2">Recent Activity</h3>
+            <div id="activity-list" class="space-y-2">
+                <p class="text-sm text-gray-400">No activity recorded.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window._heliosPulseData = function(data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.tokensIn !== undefined) document.getElementById('tokens-in').textContent = parsed.tokensIn.toLocaleString();
+                if (parsed.tokensOut !== undefined) document.getElementById('tokens-out').textContent = parsed.tokensOut.toLocaleString();
+                if (parsed.costUsd !== undefined) document.getElementById('cost-usd').textContent = '$' + parsed.costUsd.toFixed(4);
+                if (parsed.activeSessions !== undefined) document.getElementById('active-sessions').textContent = parsed.activeSessions;
+                if (parsed.activity) renderActivity(parsed.activity);
+                document.getElementById('status-dot').className = 'status-dot connected';
+                document.getElementById('status-text').textContent = 'Live';
+            } catch (e) {
+                console.error('Pulse data parse error:', e);
+            }
+        };
+
+        function renderActivity(items) {
+            const el = document.getElementById('activity-list');
+            el.innerHTML = items.slice(0, 15).map(a =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg text-sm">
+                    <span>${a.event}</span>
+                    <span class="text-xs text-gray-500">${a.time || ''}</span>
+                </div>`
+            ).join('');
+        }
+
+        if (window.__pendingPulseData) {
+            try { window._heliosPulseData(window.__pendingPulseData); window.__pendingPulseData = null; } catch(e) {}
+        }
+    </script>
+</body>
+</html>

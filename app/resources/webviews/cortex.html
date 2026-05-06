@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Helios Cortex</title>
+    <link rel="stylesheet" href="css/helios.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Cortex</h1>
+                <p class="text-sm text-gray-400">Strategy routing and model selection</p>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot connecting" id="status-dot"></span>
+                <span id="status-text">Waiting...</span>
+            </div>
+        </div>
+
+        <div id="cortex-state" class="space-y-6">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Active Strategy</h3>
+                <div id="strategy-info" class="text-sm text-gray-400">No strategy selected</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Recent Decisions</h3>
+                <div id="decisions-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No routing decisions yet.</p>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Model Performance</h3>
+                <div id="models-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No model metrics available.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window._heliosCortexData = function(data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.activeStrategy) {
+                    document.getElementById('strategy-info').innerHTML =
+                        `<div class="flex items-center gap-3">
+                            <span class="text-blue-400 font-semibold">${parsed.activeStrategy}</span>
+                            <span class="text-xs text-gray-500">confidence: ${(parsed.confidence * 100).toFixed(0)}%</span>
+                        </div>`;
+                }
+                if (parsed.decisions) renderDecisions(parsed.decisions);
+                if (parsed.models) renderModels(parsed.models);
+                document.getElementById('status-dot').className = 'status-dot connected';
+                document.getElementById('status-text').textContent = 'Live';
+            } catch (e) {
+                console.error('Cortex data parse error:', e);
+            }
+        };
+
+        function renderDecisions(decisions) {
+            const el = document.getElementById('decisions-list');
+            el.innerHTML = decisions.slice(0, 10).map(d =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg text-sm">
+                    <span>${d.strategy}</span>
+                    <span class="text-xs text-gray-500">${d.model}</span>
+                </div>`
+            ).join('');
+        }
+
+        function renderModels(models) {
+            const el = document.getElementById('models-list');
+            el.innerHTML = models.map(m =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <span class="text-sm">${m.name}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-green-400">${(m.successRate * 100).toFixed(0)}%</span>
+                        <span class="text-xs text-gray-500">${m.calls} calls</span>
+                    </div>
+                </div>`
+            ).join('');
+        }
+
+        if (window.__pendingCortexData) {
+            try { window._heliosCortexData(window.__pendingCortexData); window.__pendingCortexData = null; } catch(e) {}
+        }
+    </script>
+</body>
+</html>

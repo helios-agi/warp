@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Helios Governance</title>
+    <link rel="stylesheet" href="css/helios.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Governance</h1>
+                <p class="text-sm text-gray-400">Rules, approvals, and compliance</p>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot connecting" id="status-dot"></span>
+                <span id="status-text">Waiting...</span>
+            </div>
+        </div>
+
+        <div id="governance-state" class="space-y-6">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Active Rules</h3>
+                <div id="rules-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No governance rules configured.</p>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Pending Approvals</h3>
+                <div id="approvals-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No pending approvals.</p>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Audit Log</h3>
+                <div id="audit-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No audit events.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window._heliosGovernanceData = function(data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.rules) renderRules(parsed.rules);
+                if (parsed.approvals) renderApprovals(parsed.approvals);
+                if (parsed.audit) renderAudit(parsed.audit);
+                document.getElementById('status-dot').className = 'status-dot connected';
+                document.getElementById('status-text').textContent = 'Active';
+            } catch (e) {
+                console.error('Governance data parse error:', e);
+            }
+        };
+
+        function renderRules(rules) {
+            const el = document.getElementById('rules-list');
+            el.innerHTML = rules.map(r =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <span class="text-sm">${r.name}</span>
+                    <span class="text-xs ${r.enabled ? 'text-green-400' : 'text-gray-500'}">${r.enabled ? 'Active' : 'Disabled'}</span>
+                </div>`
+            ).join('');
+        }
+
+        function renderApprovals(approvals) {
+            const el = document.getElementById('approvals-list');
+            if (approvals.length === 0) {
+                el.innerHTML = '<p class="text-sm text-gray-400">No pending approvals.</p>';
+                return;
+            }
+            el.innerHTML = approvals.map(a =>
+                `<div class="p-3 bg-gray-900 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold">${a.action}</span>
+                        <span class="text-xs text-yellow-400">Pending</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">${a.requester} — ${a.reason || ''}</p>
+                </div>`
+            ).join('');
+        }
+
+        function renderAudit(events) {
+            const el = document.getElementById('audit-list');
+            el.innerHTML = events.slice(0, 20).map(e =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg text-sm">
+                    <span>${e.action}</span>
+                    <span class="text-xs text-gray-500">${e.timestamp || ''}</span>
+                </div>`
+            ).join('');
+        }
+
+        if (window.__pendingGovernanceData) {
+            try { window._heliosGovernanceData(window.__pendingGovernanceData); window.__pendingGovernanceData = null; } catch(e) {}
+        }
+    </script>
+</body>
+</html>
