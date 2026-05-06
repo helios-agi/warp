@@ -3634,7 +3634,7 @@ impl Workspace {
                 block_lists,
             } => {
                 let active_tab_index = window_snapshot.active_tab_index;
-                let restored_left_panel_open = window_snapshot.left_panel_open;
+                let _restored_left_panel_open = window_snapshot.left_panel_open;
 
                 window_snapshot
                     .tabs
@@ -10999,7 +10999,7 @@ impl Workspace {
         self.add_tab_with_pane_layout(panes_layout, Arc::new(HashMap::new()), None, ctx);
     }
 
-    fn webview_resource_url(filename: &str) -> String {
+    pub(crate) fn webview_resource_url(filename: &str) -> String {
         // Look in the app bundle Resources directory first
         let bundle_path = format!(
             "{}/Contents/Resources/webviews/{}",

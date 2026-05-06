@@ -26,6 +26,7 @@ pub(super) mod notebook_pane;
 pub(super) mod settings_pane;
 pub(super) mod terminal_pane;
 pub mod view;
+#[allow(deprecated)]
 pub(crate) mod webview_pane;
 pub(super) mod webview_view;
 pub(super) mod welcome_pane;

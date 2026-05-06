@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>Helios Warm Loop</title>
+    <link rel="stylesheet" href="css/helios.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto max-w-3xl p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">Warm Loop</h1>
+                <p class="text-sm text-gray-400">Continuous improvement cycle</p>
+            </div>
+            <div class="status-bar">
+                <span class="status-dot connecting" id="status-dot"></span>
+                <span id="status-text">Idle</span>
+            </div>
+        </div>
+
+        <div id="loop-state" class="space-y-6">
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">Current Iteration</h3>
+                <div id="iteration-info" class="text-sm text-gray-400">No active loop</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                <h3 class="font-semibold mb-2">History</h3>
+                <div id="history-list" class="space-y-2">
+                    <p class="text-sm text-gray-400">No iterations recorded.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window._heliosWarmLoopData = function(data) {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.current) {
+                    document.getElementById('iteration-info').innerHTML =
+                        `<div class="flex items-center justify-between">
+                            <span>Iteration #${parsed.current.iteration}</span>
+                            <span class="text-xs text-blue-400">${parsed.current.status}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${parsed.current.description || ''}</p>`;
+                }
+                if (parsed.history) renderHistory(parsed.history);
+                document.getElementById('status-dot').className = 'status-dot connected';
+                document.getElementById('status-text').textContent = parsed.current ? 'Running' : 'Idle';
+            } catch (e) {
+                console.error('WarmLoop data parse error:', e);
+            }
+        };
+
+        function renderHistory(items) {
+            const el = document.getElementById('history-list');
+            el.innerHTML = items.map(h =>
+                `<div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <span class="text-sm">#${h.iteration}: ${h.description || 'iteration'}</span>
+                    <span class="text-xs ${h.improved ? 'text-green-400' : 'text-gray-500'}">${h.improved ? '↑' : '—'}</span>
+                </div>`
+            ).join('');
+        }
+
+        if (window.__pendingWarmLoopData) {
+            try { window._heliosWarmLoopData(window.__pendingWarmLoopData); window.__pendingWarmLoopData = null; } catch(e) {}
+        }
+    </script>
+</body>
+</html>
